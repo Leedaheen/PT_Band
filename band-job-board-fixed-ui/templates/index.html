@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>구인/구직 게시판</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
+</head>
+<body class="bg-gray-100 p-4">
+  <div class="flex justify-between items-center mb-2">
+    <h1 class="text-2xl font-bold">📌 구인/구직 게시판</h1>
+    <button onclick="openForm()" class="text-white bg-blue-600 px-3 py-1 text-sm rounded">+ 글 추가</button>
+  </div>
+
+  <div class="bg-yellow-100 text-yellow-800 text-sm rounded p-3 mb-4">
+    ※ 공지사항: 이 게시판은 평택지역 밴드 커뮤니티용입니다. 매너를 지켜주세요!
+  </div>
+
+  <div id="formArea" class="hidden mb-4">
+    <select id="type" onchange="toggleFormFields()" class="block w-full p-2 mb-2 border rounded">
+      <option value="구인">구인</option>
+      <option value="구직">구직</option>
+    </select>
+    <input id="name" placeholder="이름 또는 닉네임" class="block w-full mb-2 p-2 border" />
+    <div id="recruitFields">
+      <label class="block mb-1 text-sm font-semibold">구인 파트</label>
+      <div class="flex flex-wrap gap-2 mb-2">
+        <label><input type="checkbox" value="보컬" /> 보컬</label>
+        <label><input type="checkbox" value="기타" /> 기타</label>
+        <label><input type="checkbox" value="베이스" /> 베이스</label>
+        <label><input type="checkbox" value="드럼" /> 드럼</label>
+        <label><input type="checkbox" value="건반" /> 건반</label>
+        <label><input type="checkbox" value="기타(기타)" /> 기타(기타)</label>
+      </div>
+      <input id="location" placeholder="선호 위치" class="block w-full mb-2 p-2 border" />
+      <input id="genre" placeholder="선호 장르" class="block w-full mb-2 p-2 border" />
+      <input id="contact_recruit" placeholder="연락처 (전화번호)" class="block w-full mb-2 p-2 border" />
+    </div>
+    <div id="jobseekerFields" style="display: none">
+      <input id="contact" placeholder="연락처 (전화번호)" class="block w-full mb-2 p-2 border" />
+    </div>
+    <input id="intro" placeholder="간단한 소개 (선택)" class="block w-full mb-2 p-2 border" />
+    <input id="password" placeholder="비밀번호 (4자리)" class="block w-full mb-2 p-2 border" type="password" />
+    <button onclick="submitForm()" class="bg-green-500 text-white px-4 py-2 rounded">등록</button>
+  </div>
+
+  {% for job in jobs %}
+  <div class="bg-white p-4 mb-4 rounded shadow">
+    <h2 class="text-lg font-semibold">[{{ job.team or '팀명 미정' }}]</h2>
+    <p class="text-sm text-gray-600 mb-1">위치: {{ job.location or '-' }} | 구분: {{ job.type or '-' }}</p>
+    {% if job.intro %}<p class="text-sm italic text-gray-500">{{ job.intro }}</p>{% endif %}
+    <ul class="text-sm text-gray-700 space-y-1">
+      <li>🎯 구인 파트:
+        <ul class="ml-4 mt-1 space-y-1">
+          {% for part in job.part %}
+            <li class="flex items-center gap-2">
+              <span>{{ part }}</span>
+              {% if job.matched_parts[part] is not none %}
+                <span class="text-green-500 text-xs">✅ 매칭됨</span>
+              {% else %}
+                <button class="text-xs bg-blue-500 text-white px-2 py-1 rounded"
+                  onclick="revealContact('{{ job.contact }}', this, {{ loop.parentloop.index0 }})">
+                  매칭하기 (<span id="clicks-{{ loop.parentloop.index0 }}">{{ job.clicks or 0 }}</span>)
+                </button>
+                <span class="text-xs text-gray-500 mt-1 ml-2">이 밴드에 {{ job.clicks or 0 }}명이 매칭시도를 했습니다</span>
+              {% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      </li>
+    </ul>
+  </div>
+  {% endfor %}
+
+  <script>
+    function openForm() {
+      document.getElementById('formArea').classList.toggle('hidden');
+    }
+    function toggleFormFields() {
+      const type = document.getElementById('type').value;
+      document.getElementById('recruitFields').style.display = type === '구인' ? 'block' : 'none';
+      document.getElementById('jobseekerFields').style.display = type === '구직' ? 'block' : 'none';
+    }
+    function submitForm() {
+      const checkedParts = Array.from(document.querySelectorAll('#recruitFields input[type=checkbox]:checked')).map(el => el.value);
+      const type = document.getElementById("type").value;
+      const contact = type === '구인'
+        ? document.getElementById("contact_recruit").value
+        : document.getElementById("contact").value;
+
+      fetch("/add", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          team: document.getElementById("name").value || "",
+          part: checkedParts,
+          location: document.getElementById("location").value || "",
+          genre: document.getElementById("genre")?.value || "",
+          contact: contact || "",
+          intro: document.getElementById("intro").value || "",
+          password: document.getElementById("password").value || "",
+          type: type
+        })
+      }).then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            alert("등록 완료!");
+            location.reload();
+          }
+        });
+    }
+    function revealContact(contact, btn, index) {
+      if (!contact) return alert("연락처가 등록되지 않았습니다.");
+      const link = document.createElement("a");
+      link.href = `tel:${contact}`;
+      link.textContent = contact;
+      link.className = "text-blue-600 text-sm underline";
+      btn.replaceWith(link);
+      fetch(`/click/${index}`, { method: "POST" })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            const span = document.getElementById(`clicks-${index}`);
+            if (span) span.textContent = data.clicks;
+          }
+        });
+    }
+    window.onload = toggleFormFields;
+  </script>
+</body>
+</html>
