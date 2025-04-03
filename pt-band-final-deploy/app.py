@@ -3,7 +3,6 @@ import json, os
 from hashlib import sha256
 
 app = Flask(__name__)
-# `data.json` 파일의 경로를 `app.py` 파일과 동일한 경로로 설정
 DATA_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data.json")
 
 def load_data():
@@ -23,28 +22,17 @@ def index():
 
 @app.route("/add", methods=["POST"])
 def add_job():
-    try:
-        # JSON 데이터 받기
-        item = request.get_json()
-        print(f"Received item: {item}")  # 요청 데이터 확인 (디버깅용)
+    item = request.get_json()
+    if not item:
+        return jsonify(success=False, message="No data provided")
 
-        if not item:
-            return jsonify(success=False, message="No data provided")
-        
-        # 데이터 처리
-        data = load_data()
-        item["clicks"] = 0
-        item["matched_parts"] = {}
-        item["password"] = sha256(item["password"].encode()).hexdigest()
-        
-        # 데이터 추가 및 저장
-        data.append(item)
-        save_data(data)
-        
-        return jsonify(success=True)
-    except Exception as e:
-        print(f"Error: {e}")
-        return jsonify(success=False, message="An error occurred")
+    data = load_data()
+    item["clicks"] = 0
+    item["matched_parts"] = {}
+    item["password"] = sha256(item["password"].encode()).hexdigest()
+    data.append(item)
+    save_data(data)
+    return jsonify(success=True)
 
 @app.route("/click/<int:index>", methods=["POST"])
 def click(index):
@@ -89,4 +77,6 @@ def update(index):
     return jsonify(success=True)
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    # `PORT` 환경 변수를 통해 포트 설정
+    port = int(os.environ.get("PORT", 5000))  # 기본 포트 5000을 사용
+    app.run(host="0.0.0.0", port=port, debug=True)  # 외부에서 접근 가능하도록 설정
