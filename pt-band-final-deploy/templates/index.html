@@ -1,161 +1,239 @@
-
 <!DOCTYPE html>
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <title>PT Band</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>구인/구직 게시판</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
 </head>
 <body class="bg-gray-100 p-4">
-  <div class="flex justify-between items-center mb-4 border-b pb-2">
-    <h1 class="text-2xl font-bold text-black">📌 평택 직장인/취미 밴드 구인구직 게시판</h1>
-    <button onclick="openForm()" class="text-white bg-blue-600 hover:bg-blue-700 px-4 py-2 text-sm rounded">+</button>
+<div class="flex justify-between items-center mb-4 border-b pb-2">
+  <h1 class="text-3xl font-bold text-black">📌 평택 직장인/취미 밴드 구인구직 게시판</h1>
+  <button onclick="openForm()" class="text-white bg-blue-600 hover:bg-blue-700 px-4 py-2 text-sm rounded">+</button>
+</div>
+
+<div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-900 text-sm p-3 rounded mb-6">
+  <strong>※ 공지사항:</strong> 이 게시판은 평택지역 밴드 커뮤니티용입니다. 매너를 지켜주세요!<br>
+  <span class="block mt-1">모든 닉네임은 오픈톡 상 닉네임과 일치시켜주세요 <strong>예)</strong> 홍길동/보컬/30 → <strong>홍길동</strong></span>
+</div>
+
+<div class="mb-4 flex gap-2 flex-wrap">
+  <button onclick="filterJobs('전체')" class="px-3 py-1 text-sm bg-gray-200 rounded hover:bg-gray-300">전체</button>
+  <button onclick="filterJobs('구인')" class="px-3 py-1 text-sm bg-gray-200 rounded hover:bg-gray-300">구인만 보기</button>
+  <button onclick="filterJobs('구직')" class="px-3 py-1 text-sm bg-gray-200 rounded hover:bg-gray-300">구직만 보기</button>
+</div>
+
+{% for job in jobs %}
+<div class="bg-white p-4 mb-6 rounded shadow-lg relative job-item" data-type="{{ job.type }}">
+  <div class="absolute top-2 right-3 flex gap-1">
+    <button class="text-xs text-gray-600 hover:underline" onclick="openMatchPopup({{ loop.index0 }})">매칭상태 변경</button>
+  </div>
+  <h2 class="text-xl font-semibold mb-1">[{{ job.team or '팀명 미정' }}] <span class="text-sm text-gray-500 ml-1">({{ job.type }})</span></h2>
+  <p class="text-sm text-gray-600 mb-2"><strong>{{ job.part|join(' / ') }}</strong>{% if job.type == '구인' %} 멤버 필요해요!{% else %} 파트 지원해요 {% endif %}
+</p>
+
+  <div class="expand-content hidden">
+    <p class="text-sm text-gray-600"><strong>오픈톡 닉네임:</strong> {{ job.nickname or '-' }}</p>
+    <p class="text-sm text-gray-600"><strong>위치:</strong> {{ job.location or '-' }}</p>
+    <p class="text-sm text-gray-600"><strong>연령대:</strong> {{ job.age or '-' }}</p>
+    {% if job.fee %}<p class="text-sm text-gray-600"><strong>월 회비:</strong> {{ job.fee }}</p>{% endif %}
+        <p class="text-sm text-navy-700 font-bold">{{ job.intro or '' }}</p>
   </div>
 
-  <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-900 text-sm p-3 rounded mb-6">
-    <strong>※ 공지사항:</strong> 이 게시판은 평택지역 밴드 커뮤니티용입니다. 매너를 지켜주세요!<br />
-    <span class="block mt-1">모든 닉네임은 오픈톡 상 닉네임과 일치시켜주세요 <strong>예)</strong> 홍길동/보컬/30 → <strong>홍길동</strong></span>
+  <div class="flex justify-between items-center mt-2">
+    <span class="text-xs text-blue-500 cursor-pointer ml-1" onclick="toggleExpand(this)">&lt;더 보기&gt;</span>
+    <a href="tel:{{ job.contact }}" onclick="fetch('/click/{{ loop.index0 }}', { method: 'POST' })" class="text-xs bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded">매칭하기 ({{ job.clicks or 0 }})</a>
   </div>
+</div>
+{% endfor %}
 
-  {% for job in jobs %}
-  <div class="bg-white rounded shadow p-4 mb-4 relative">
-    <div class="absolute top-2 right-3 text-sm text-gray-600 cursor-pointer">
-      <button onclick="openMatchPopup({{ loop.index0 }})" class="hover:underline">매칭상태 변경</button>
-    </div>
-    <h2 class="text-xl font-bold mb-1">[{{ job.team or '팀명 미정' }}] <span class="text-sm text-gray-500">({{ job.type }})</span></h2>
-    <p class="text-sm"><strong>위치:</strong> {{ job.location or '-' }}</p>
-    <p class="text-sm"><strong>연령대:</strong> {{ job.age or '-' }}</p>
-    <p class="text-sm"><strong>월 회비:</strong> {{ job.fee or '-' }}</p>
-    <p class="text-sm font-bold text-blue-800 mt-2">{{ job.intro or '' }}</p>
-    <div class="text-right mt-3">
-      <button onclick="clickMatch({{ loop.index0 }}, '{{ job.contact }}')" class="text-xs bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700">
-        매칭하기 ({{ job.clicks or 0 }})
-      </button>
-    </div>
-  </div>
-  {% endfor %}
+<script>
+function filterJobs(type) {
+  const items = document.querySelectorAll('.job-item');
+  items.forEach(el => {
+    el.style.display = (type === '전체' || el.dataset.type === type) ? 'block' : 'none';
+  });
+}
 
-  <template id="form-popup">
-    <div class="popup-wrapper fixed top-1/2 left-1/2 bg-white p-4 rounded shadow z-50 max-w-sm w-full" style="transform: translate(-50%, -50%)">
-      <div class="text-right">
-        <button onclick="closePopup(this)" class="text-sm text-red-500">✖ 닫기</button>
+function openForm() {
+  const popup = document.createElement('div');
+  popup.className = 'fixed top-1/2 left-1/2 bg-white p-4 rounded shadow z-50 max-w-sm w-full';
+  popup.style.transform = 'translate(-50%, -50%)';
+  popup.innerHTML = `
+    <div class='text-right'><button onclick='this.parentElement.parentElement.remove()' class='text-sm text-red-500'>✖ 닫기</button></div>
+    <form id='new-post-form'>
+      <p class='mb-2 text-sm font-semibold'>글 작성하기</p>
+      <div class='mb-2'>
+        <label class='block text-sm font-medium mb-1'>구분:</label>
+        <select name='type' class='border p-1 w-full'>
+          <option value='구인'>구인</option>
+          <option value='구직'>구직</option>
+        </select>
       </div>
-      <form id="new-post-form">
-        <p class="mb-2 text-sm font-semibold">글 작성하기</p>
-        <div class="mb-2">
-          <label class="block text-sm font-medium mb-1">구분:</label>
-          <select name="type" class="border p-1 w-full">
-            <option value="구인">구인</option>
-            <option value="구직">구직</option>
-          </select>
-        </div>
-        <div id="form-content"></div>
-        <div class="mt-4 text-right">
-          <button type="submit" class="bg-blue-600 text-white px-3 py-1 rounded">등록</button>
-        </div>
-      </form>
-    </div>
-  </template>
+      <div id='form-content'></div>
+      <div class='mt-4 text-right'>
+        <button type='submit' class='bg-blue-600 text-white px-3 py-1 rounded'>등록</button>
+      </div>
+    </form>`;
+  document.body.appendChild(popup);
 
-  <script>
-    function closePopup(el) {
-      const popup = el.closest('.popup-wrapper');
-      if (popup) popup.remove();
-    }
+  const formTypeSelect = popup.querySelector('select[name="type"]');
+  const formContent = popup.querySelector('#form-content');
+  formTypeSelect.onchange = () => renderFormFields(formContent, formTypeSelect.value);
+  renderFormFields(formContent, '구인');
 
-    function openForm() {
-      const tpl = document.querySelector('#form-popup');
-      const clone = tpl.content.cloneNode(true);
-      document.body.appendChild(clone);
-      const formContent = document.querySelector('#form-content');
-      renderFormFields(formContent, '구인');
+  document.getElementById('new-post-form').onsubmit = (e) => {
+    e.preventDefault();
+    const form = new FormData(e.target);
+    const type = form.get('type');
+    const payload = {
+      type,
+      team: form.get('team') || '',
+      nickname: form.get('nickname') || '',
+      location: form.get('location') || '',
+      fee: form.get('fee') || '',
+      contact: form.get('contact') || '',
+      intro: form.get('intro') || '',
+      password: form.get('password'),
+      part: [...form.getAll('part')]
+    };
+    fetch('/add', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    }).then(res => res.json()).then(result => {
+      if (result.success) location.reload();
+      else alert('등록 실패: ' + (result.message || '오류'));
+    });
+  }
+}
 
-      document.querySelector('select[name="type"]').onchange = (e) => {
-        renderFormFields(formContent, e.target.value);
+function renderFormFields(container, type) {
+  const partChecklist = ['보컬(남)', '보컬(여)', '드럼', '기타', '베이스', '건반', '기타 파트']
+    .map(part => `<label class='mr-2'><input type='checkbox' name='part' value='${part}' class='mr-1' />${part}</label>`).join(' ');
+  if (type === '구인') {
+    container.innerHTML = `
+      <input required name='team' placeholder='밴드명 필수' class='border p-1 w-full mb-2' />
+      <input required name='nickname' placeholder='오픈톡 닉네임 필수' class='border p-1 w-full mb-2' />
+      <input name='age' placeholder='멤버 연령대' class='border p-1 w-full mb-2' />
+      <div class='mb-2'><label class='block mb-1'>구인 파트:</label>${partChecklist}</div>
+      <input required name='location' placeholder='연습실 위치 (필수)' class='border p-1 w-full mb-2' />
+      <input name='fee' placeholder='월 회비 선택' class='border p-1 w-full mb-2' />
+      <input required name='contact' placeholder='연락처 필수' class='border p-1 w-full mb-2' />
+      <textarea name='intro' placeholder='선호 장르 및 간단한 소개 (100자 이내)' maxlength='100' class='border p-1 w-full mb-2' oninput="updateCharCount(this)"></textarea>
+<div class='text-right text-xs text-gray-500' id='char-count'>(0/100 byte)</div>
+      <input required name='password' type='password' placeholder='비밀번호 4자리' class='border p-1 w-full mb-2' />
+    `;
+  } else {
+    container.innerHTML = `
+      <input required name='nickname' placeholder='오픈톡 닉네임 (필수)' class='border p-1 w-full mb-2' />
+      <div class='mb-2'><label class='block mb-1'>구직 파트:</label>${partChecklist}</div>
+      <input required name='location' placeholder='선호 연습실 위치 (필수)' class='border p-1 w-full mb-2' />
+      <input name='age' placeholder='멤버 연령대' class='border p-1 w-full mb-2' />
+      <input required name='contact' placeholder='연락처 (필수)' class='border p-1 w-full mb-2' />
+      <textarea name='intro' placeholder='선호 장르 및 간단한 소개 (100자 이내)' maxlength='100' class='border p-1 w-full mb-2'></textarea>
+      <input required name='password' type='password' placeholder='비밀번호 (4자리)' class='border p-1 w-full mb-2' />
+    `;
+  }
+}
+
+
+
+function openMatchPopup(index) {
+  const pw = prompt("비밀번호를 입력하세요 (관리자: admin1234)");
+  if (!pw) return;
+  fetch(`/verify-password/${index}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password: pw })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (!data.success) return alert("비밀번호가 일치하지 않습니다.");
+    const job = data.job;
+    const parts = job.part || [];
+    const partOptions = parts.map(part => `<label><input type='checkbox' name='match' value='${part}' ${job.matched_parts[part] ? 'checked' : ''}> ${part}</label>`).join('<br>');
+    const html = `<div class='text-right mb-2'><button onclick='this.parentElement.parentElement.remove()' class='text-sm text-red-500'>✖ 닫기</button></div><form id='match-form'>
+      <p class='mb-2 text-sm font-semibold'>글 수정 및 매칭완료 설정</p>
+      <input type='text' name='team' value='${job.team}' placeholder='팀명' class='border p-1 w-full mb-2' />
+      <input type='text' name='location' value='${job.location}' placeholder='위치' class='border p-1 w-full mb-2' />
+      <input type='text' name='type' value='${job.type}' placeholder='구분 구인/구직' class='border p-1 w-full mb-2' />
+      <textarea name='intro' placeholder='선호 장르 및 간단한 소개 (100자 이내)' maxlength='100' class='border p-1 w-full mb-2' oninput='updateCharCount(this)'>\${job.intro}</textarea><div class='text-right text-xs text-gray-500' id='char-count'>(\${new Blob([job.intro || '']).size}/100 byte)</div>
+      <p class='mb-1 text-sm'>✅ 매칭 완료할 파트를 선택하세요:</p>
+      ${partOptions}
+      <div class='mt-3'>
+        <button type='submit' class='bg-green-600 text-white px-3 py-1 rounded'>저장</button>
+      </div>
+    </form>`;
+    const popup = document.createElement('div');
+    popup.className = 'fixed top-1/2 left-1/2 bg-white p-4 rounded shadow z-50 max-w-sm w-full';
+    popup.style.transform = 'translate(-50%, -50%)';
+    popup.innerHTML = html;
+    document.body.appendChild(popup);
+
+    document.getElementById('match-form').onsubmit = (e) => {
+      e.preventDefault();
+      const form = new FormData(e.target);
+      const updated = {
+        team: form.get('team'),
+        location: form.get('location'),
+        type: form.get('type'),
+        intro: form.get('intro'),
+        password: pw,
+        parts: [...e.target.querySelectorAll('input[name="match"]:checked')].map(i => i.value)
       };
-
-      document.querySelector('#new-post-form').onsubmit = (e) => {
-        e.preventDefault();
-        const form = e.target;
-        const formData = new FormData(form);
-        const data = {
-          type: formData.get("type"),
-          team: formData.get("team") || "",
-          nickname: formData.get("nickname") || "",
-          location: formData.get("location") || "",
-          age: formData.get("age") || "",
-          fee: formData.get("fee") || "",
-          contact: formData.get("contact") || "",
-          intro: formData.get("intro") || "",
-          password: formData.get("password"),
-          part: formData.getAll("part")
-        };
-        fetch("/add", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(data)
-        }).then(res => res.json()).then(result => {
-          if (result.success) location.reload();
-          else alert("등록 실패");
-        });
-      };
-    }
-
-    function renderFormFields(container, type) {
-      const parts = ['보컬(남)', '보컬(여)', '기타', '베이스', '드럼', '건반', '기타 파트']
-        .map(p => `<label class="mr-2"><input type="checkbox" name="part" value="${p}" class="mr-1" />${p}</label>`).join(' ');
-      if (type === '구인') {
-        container.innerHTML = `
-          <input name="team" placeholder="밴드명 (필수입력)" class="border p-1 w-full mb-2" required />
-          <input name="nickname" placeholder="오픈톡 닉네임 (필수입력)" class="border p-1 w-full mb-2" required />
-          <div class="mb-2"><label class="block text-sm mb-1">구인 파트:</label>${parts}</div>
-          <input name="location" placeholder="연습실 위치 (필수입력)" class="border p-1 w-full mb-2" required />
-          <input name="age" placeholder="연령대 (선택입력)" class="border p-1 w-full mb-2" />
-          <input name="fee" placeholder="월 회비 (선택입력)" class="border p-1 w-full mb-2" />
-          <input name="contact" placeholder="연락처 (필수입력)" class="border p-1 w-full mb-2" required />
-          <textarea name="intro" maxlength="100" placeholder="선호 장르 및 간단한 소개 (100자 이내)" class="border p-1 w-full mb-2"></textarea>
-          <input name="password" type="password" placeholder="비밀번호 (4자리)" class="border p-1 w-full mb-2" required />
-        `;
-      } else {
-        container.innerHTML = `
-          <input name="nickname" placeholder="오픈톡 닉네임 (필수입력)" class="border p-1 w-full mb-2" required />
-          <div class="mb-2"><label class="block text-sm mb-1">구직 파트:</label>${parts}</div>
-          <input name="location" placeholder="선호 연습실 위치 (필수입력)" class="border p-1 w-full mb-2" required />
-          <input name="age" placeholder="연령대 (선택입력)" class="border p-1 w-full mb-2" />
-          <input name="contact" placeholder="연락처 (필수입력)" class="border p-1 w-full mb-2" required />
-          <textarea name="intro" maxlength="100" placeholder="선호 장르 및 간단한 소개 (100자 이내)" class="border p-1 w-full mb-2"></textarea>
-          <input name="password" type="password" placeholder="비밀번호 (4자리)" class="border p-1 w-full mb-2" required />
-        `;
-      }
-    }
-
-    function clickMatch(index, contact) {
-      fetch(`/click/${index}`, { method: 'POST' })
-        .then(res => res.json())
-        .then(data => {
-          if (data.success) {
-            window.location.href = 'tel:' + contact;
-          } else {
-            alert("매칭 실패");
-          }
-        });
-    }
-
-    function openMatchPopup(index) {
-      const pw = prompt("비밀번호를 입력하세요 (관리자: admin1234)");
-      if (!pw) return;
-      fetch(`/verify-password/${index}`, {
+      fetch(`/update/${index}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: pw })
-      })
-      .then(res => res.json())
-      .then(data => {
-        if (!data.success) return alert("비밀번호가 일치하지 않습니다.");
-        alert("매칭 팝업을 띄워 수정 기능을 연결하세요.");
+        body: JSON.stringify(updated)
+      }).then(res => res.json()).then(resp => {
+        if (resp.success) location.reload();
+        else alert("저장 실패: " + (resp.message || "오류"));
       });
     }
-  </script>
+  });
+}
+function toggleExpand(el) {
+  const container = el.closest('.job-item');
+  const content = container.querySelector('.expand-content');
+  const toggleBtn = el;
+
+  if (content.classList.contains('hidden')) {
+    content.classList.remove('hidden');
+    toggleBtn.innerHTML = '&lt;접기&gt;'; toggleBtn.classList.add('text-left');
+  } else {
+    content.classList.add('hidden');
+    toggleBtn.innerHTML = '&lt;더 보기&gt;'; toggleBtn.classList.add('text-left');
+  }
+}
+
+function updateCharCount(textarea) {
+  const countDisplay = document.getElementById('char-count');
+  if (!countDisplay) return;
+  const length = new Blob([textarea.value]).size;
+  countDisplay.textContent = `(${length}/100 byte)`;
+}
+</script>
+
+
+{% set has_matched = false %}
+{% for job in jobs %}
+  {% if job.matched_parts and job.matched_parts|length > 0 %}
+    {% set has_matched = true %}
+  {% endif %}
+{% endfor %}
+{% if has_matched %}
+<div class="mt-10">
+  <h2 class="text-lg font-bold text-gray-600 mb-3">✅ 매칭 완료된 항목</h2>
+  {% for job in jobs %}
+    {% if job.matched_parts and job.matched_parts|length > 0 %}
+      <div class="bg-gray-200 text-gray-600 p-2 rounded mb-2">
+        <span class="font-semibold">{{ job.team or '팀명 미정' }}</span>
+        - {{ job.matched_parts.keys()|join(', ') }}
+      </div>
+    {% endif %}
+  {% endfor %}
+</div>
+{% endif %}
 </body>
 </html>
