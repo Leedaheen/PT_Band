@@ -18,23 +18,28 @@
     <span class="block mt-1">모든 닉네임은 오픈톡 상 닉네임과 일치시켜주세요 <strong>예)</strong> 홍길동/보컬/30 → <strong>홍길동</strong></span>
   </div>
 
-  <!-- 리스트 출력 -->
   {% for job in jobs %}
-  <div class="bg-white rounded shadow p-4 mb-4">
+  <div class="bg-white rounded shadow p-4 mb-4 relative">
+    <div class="absolute top-2 right-3 text-sm text-gray-600 cursor-pointer">
+      <button onclick="openMatchPopup({{ loop.index0 }})" class="hover:underline">매칭상태 변경</button>
+    </div>
     <h2 class="text-xl font-bold mb-1">[{{ job.team or '팀명 미정' }}] <span class="text-sm text-gray-500">({{ job.type }})</span></h2>
     <p class="text-sm"><strong>위치:</strong> {{ job.location or '-' }}</p>
     <p class="text-sm"><strong>연령대:</strong> {{ job.age or '-' }}</p>
     <p class="text-sm"><strong>월 회비:</strong> {{ job.fee or '-' }}</p>
     <p class="text-sm font-bold text-blue-800 mt-2">{{ job.intro or '' }}</p>
-    <div class="text-sm text-right mt-2">👀 매칭시도 {{ job.clicks or 0 }}회</div>
+    <div class="text-right mt-3">
+      <button onclick="clickMatch({{ loop.index0 }}, '{{ job.contact }}')" class="text-xs bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700">
+        매칭하기 ({{ job.clicks or 0 }})
+      </button>
+    </div>
   </div>
   {% endfor %}
 
-  <!-- 글쓰기 팝업 템플릿 -->
   <template id="form-popup">
-    <div class="fixed top-1/2 left-1/2 bg-white p-4 rounded shadow z-50 max-w-sm w-full" style="transform: translate(-50%, -50%)">
+    <div class="popup-wrapper fixed top-1/2 left-1/2 bg-white p-4 rounded shadow z-50 max-w-sm w-full" style="transform: translate(-50%, -50%)">
       <div class="text-right">
-        <button onclick="this.closest('div').remove()" class="text-sm text-red-500">✖ 닫기</button>
+        <button onclick="closePopup(this)" class="text-sm text-red-500">✖ 닫기</button>
       </div>
       <form id="new-post-form">
         <p class="mb-2 text-sm font-semibold">글 작성하기</p>
@@ -54,71 +59,103 @@
   </template>
 
   <script>
-  function openForm() {
-    const tpl = document.querySelector('#form-popup');
-    const clone = tpl.content.cloneNode(true);
-    document.body.appendChild(clone);
-    const formContent = document.querySelector('#form-content');
-    renderFormFields(formContent, '구인');
-
-    document.querySelector('select[name="type"]').onchange = (e) => {
-      renderFormFields(formContent, e.target.value);
-    };
-
-    document.querySelector('#new-post-form').onsubmit = (e) => {
-      e.preventDefault();
-      const form = e.target;
-      const formData = new FormData(form);
-      const data = {
-        type: formData.get("type"),
-        team: formData.get("team") || "",
-        nickname: formData.get("nickname") || "",
-        location: formData.get("location") || "",
-        age: formData.get("age") || "",
-        fee: formData.get("fee") || "",
-        contact: formData.get("contact") || "",
-        intro: formData.get("intro") || "",
-        password: formData.get("password"),
-        part: formData.getAll("part")
-      };
-      fetch("/add", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data)
-      }).then(res => res.json()).then(result => {
-        if (result.success) location.reload();
-        else alert("등록 실패");
-      });
-    };
-  }
-
-  function renderFormFields(container, type) {
-    const parts = ['보컬(남)', '보컬(여)', '기타', '베이스', '드럼', '건반', '기타 파트']
-      .map(p => `<label class="mr-2"><input type="checkbox" name="part" value="${p}" class="mr-1" />${p}</label>`).join(' ');
-    if (type === '구인') {
-      container.innerHTML = `
-        <input name="team" placeholder="밴드명 (필수입력)" class="border p-1 w-full mb-2" required />
-        <input name="nickname" placeholder="오픈톡 닉네임 (필수입력)" class="border p-1 w-full mb-2" required />
-        <div class="mb-2"><label class="block text-sm mb-1">구인 파트:</label>${parts}</div>
-        <input name="location" placeholder="연습실 위치 (필수입력)" class="border p-1 w-full mb-2" required />
-        <input name="age" placeholder="연령대 (선택입력)" class="border p-1 w-full mb-2" />
-        <input name="fee" placeholder="월 회비 (선택입력)" class="border p-1 w-full mb-2" />
-        <input name="contact" placeholder="연락처 (필수입력)" class="border p-1 w-full mb-2" required />
-        <textarea name="intro" maxlength="100" placeholder="선호 장르 및 간단한 소개 (100자 이내)" class="border p-1 w-full mb-2"></textarea>
-        <input name="password" type="password" placeholder="비밀번호 (4자리)" class="border p-1 w-full mb-2" required />
-      `;
-    } else {
-      container.innerHTML = `
-        <input name="nickname" placeholder="오픈톡 닉네임 (필수입력)" class="border p-1 w-full mb-2" required />
-        <div class="mb-2"><label class="block text-sm mb-1">구직 파트:</label>${parts}</div>
-        <input name="location" placeholder="선호 연습실 위치 (필수입력)" class="border p-1 w-full mb-2" required />
-        <input name="age" placeholder="연령대 (선택입력)" class="border p-1 w-full mb-2" />
-        <input name="contact" placeholder="연락처 (필수입력)" class="border p-1 w-full mb-2" required />
-        <textarea name="intro" maxlength="100" placeholder="선호 장르 및 간단한 소개 (100자 이내)" class="border p-1 w-full mb-2"></textarea>
-        <input name="password" type="password" placeholder="비밀번호 (4자리)" class="border p-1 w-full mb-2" required />
-      `;
+    function closePopup(el) {
+      const popup = el.closest('.popup-wrapper');
+      if (popup) popup.remove();
     }
-  }
+
+    function openForm() {
+      const tpl = document.querySelector('#form-popup');
+      const clone = tpl.content.cloneNode(true);
+      document.body.appendChild(clone);
+      const formContent = document.querySelector('#form-content');
+      renderFormFields(formContent, '구인');
+
+      document.querySelector('select[name="type"]').onchange = (e) => {
+        renderFormFields(formContent, e.target.value);
+      };
+
+      document.querySelector('#new-post-form').onsubmit = (e) => {
+        e.preventDefault();
+        const form = e.target;
+        const formData = new FormData(form);
+        const data = {
+          type: formData.get("type"),
+          team: formData.get("team") || "",
+          nickname: formData.get("nickname") || "",
+          location: formData.get("location") || "",
+          age: formData.get("age") || "",
+          fee: formData.get("fee") || "",
+          contact: formData.get("contact") || "",
+          intro: formData.get("intro") || "",
+          password: formData.get("password"),
+          part: formData.getAll("part")
+        };
+        fetch("/add", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data)
+        }).then(res => res.json()).then(result => {
+          if (result.success) location.reload();
+          else alert("등록 실패");
+        });
+      };
+    }
+
+    function renderFormFields(container, type) {
+      const parts = ['보컬(남)', '보컬(여)', '기타', '베이스', '드럼', '건반', '기타 파트']
+        .map(p => `<label class="mr-2"><input type="checkbox" name="part" value="${p}" class="mr-1" />${p}</label>`).join(' ');
+      if (type === '구인') {
+        container.innerHTML = `
+          <input name="team" placeholder="밴드명 (필수입력)" class="border p-1 w-full mb-2" required />
+          <input name="nickname" placeholder="오픈톡 닉네임 (필수입력)" class="border p-1 w-full mb-2" required />
+          <div class="mb-2"><label class="block text-sm mb-1">구인 파트:</label>${parts}</div>
+          <input name="location" placeholder="연습실 위치 (필수입력)" class="border p-1 w-full mb-2" required />
+          <input name="age" placeholder="연령대 (선택입력)" class="border p-1 w-full mb-2" />
+          <input name="fee" placeholder="월 회비 (선택입력)" class="border p-1 w-full mb-2" />
+          <input name="contact" placeholder="연락처 (필수입력)" class="border p-1 w-full mb-2" required />
+          <textarea name="intro" maxlength="100" placeholder="선호 장르 및 간단한 소개 (100자 이내)" class="border p-1 w-full mb-2"></textarea>
+          <input name="password" type="password" placeholder="비밀번호 (4자리)" class="border p-1 w-full mb-2" required />
+        `;
+      } else {
+        container.innerHTML = `
+          <input name="nickname" placeholder="오픈톡 닉네임 (필수입력)" class="border p-1 w-full mb-2" required />
+          <div class="mb-2"><label class="block text-sm mb-1">구직 파트:</label>${parts}</div>
+          <input name="location" placeholder="선호 연습실 위치 (필수입력)" class="border p-1 w-full mb-2" required />
+          <input name="age" placeholder="연령대 (선택입력)" class="border p-1 w-full mb-2" />
+          <input name="contact" placeholder="연락처 (필수입력)" class="border p-1 w-full mb-2" required />
+          <textarea name="intro" maxlength="100" placeholder="선호 장르 및 간단한 소개 (100자 이내)" class="border p-1 w-full mb-2"></textarea>
+          <input name="password" type="password" placeholder="비밀번호 (4자리)" class="border p-1 w-full mb-2" required />
+        `;
+      }
+    }
+
+    function clickMatch(index, contact) {
+      fetch(`/click/${index}`, { method: 'POST' })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            window.location.href = 'tel:' + contact;
+          } else {
+            alert("매칭 실패");
+          }
+        });
+    }
+
+    function openMatchPopup(index) {
+      const pw = prompt("비밀번호를 입력하세요 (관리자: admin1234)");
+      if (!pw) return;
+      fetch(`/verify-password/${index}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: pw })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (!data.success) return alert("비밀번호가 일치하지 않습니다.");
+        alert("매칭 팝업을 띄워 수정 기능을 연결하세요.");
+      });
+    }
   </script>
 </body>
 </html>
