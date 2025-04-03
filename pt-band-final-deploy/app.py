@@ -74,4 +74,6 @@ def update(index):
     return jsonify(success=True)
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    # 환경 변수를 통해 포트 지정
+    port = int(os.environ.get("PORT", 5000))  # 환경 변수 PORT로 포트 설정
+    app.run(host="0.0.0.0", port=port, debug=False)  # 외부에서 접근 가능하도록 설정
