@@ -1,14 +1,10 @@
-
 from flask import Flask, render_template, request, jsonify
-import os
-import json
+import json, os
+from hashlib import sha256
 
 app = Flask(__name__)
+DATA_FILE = "data/jobs.json"
 
-# 가상 데이터 저장용 JSON 파일
-DATA_FILE = "data.json"
-
-# 초기 데이터 로딩
 def load_data():
     if not os.path.exists(DATA_FILE):
         return []
@@ -26,24 +22,56 @@ def index():
 
 @app.route("/add", methods=["POST"])
 def add_job():
-    jobs = load_data()
-    data = request.json
-    data["clicks"] = 0
-    data["matched_parts"] = {}
-    jobs.append(data)
-    save_data(jobs)
+    data = load_data()
+    item = request.get_json()
+    item["clicks"] = 0
+    item["matched_parts"] = {}
+    item["password"] = sha256(item["password"].encode()).hexdigest()
+    data.append(item)
+    save_data(data)
     return jsonify(success=True)
 
 @app.route("/click/<int:index>", methods=["POST"])
-def click_job(index):
-    jobs = load_data()
-    if 0 <= index < len(jobs):
-        jobs[index]["clicks"] = jobs[index].get("clicks", 0) + 1
-        save_data(jobs)
+def click(index):
+    data = load_data()
+    if 0 <= index < len(data):
+        data[index]["clicks"] = data[index].get("clicks", 0) + 1
+        save_data(data)
         return jsonify(success=True)
-    return jsonify(success=False, message="Invalid index")
+    return jsonify(success=False)
+
+@app.route("/verify-password/<int:index>", methods=["POST"])
+def verify_password(index):
+    req = request.get_json()
+    data = load_data()
+    if index >= len(data): return jsonify(success=False)
+    input_pw = sha256(req["password"].encode()).hexdigest()
+    is_admin = req["password"] == "admin1234"
+    if is_admin or input_pw == data[index]["password"]:
+        return jsonify(success=True, job=data[index])
+    return jsonify(success=False)
+
+@app.route("/update/<int:index>", methods=["POST"])
+def update(index):
+    req = request.get_json()
+    data = load_data()
+    if index >= len(data): return jsonify(success=False)
+    pw_hash = sha256(req["password"].encode()).hexdigest()
+    is_admin = req["password"] == "admin1234"
+    if not is_admin and pw_hash != data[index]["password"]:
+        return jsonify(success=False, message="비밀번호 불일치")
+
+    # 업데이트 항목
+    data[index]["team"] = req["team"]
+    data[index]["location"] = req["location"]
+    data[index]["type"] = req["type"]
+    data[index]["intro"] = req["intro"]
+    matched = {}
+    for part in req.get("parts", []):
+        matched[part] = True
+    data[index]["matched_parts"] = matched
+    save_data(data)
+    return jsonify(success=True)
 
 if __name__ == "__main__":
-    # Render 배포 시 포트 바인딩 필수
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=True)
+    app.run(debug=True)
