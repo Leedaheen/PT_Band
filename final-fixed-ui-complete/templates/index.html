@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>구인/구직 게시판</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
+</head>
+<body class="bg-gray-100 p-4">
+<div class="flex justify-between items-center mb-4 border-b pb-2">
+  <h1 class="text-3xl font-bold text-black">📌 평택 직장인/취미 밴드 구인구직 게시판</h1>
+  <button onclick="openForm()" class="text-white bg-blue-600 hover:bg-blue-700 px-4 py-2 text-sm rounded">+ 글 추가</button>
+</div>
+
+<div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-900 text-sm p-3 rounded mb-6">
+  <strong>※ 공지사항:</strong> 이 게시판은 평택지역 밴드 커뮤니티용입니다. 매너를 지켜주세요!<br>
+  <span class="block mt-1">모든 닉네임은 오픈톡 상 닉네임과 일치시켜주세요 <strong>예)</strong> 홍길동/보컬/30 → <strong>홍길동</strong></span>
+</div>
+
+<!-- 필터 버튼 추가 -->
+<div class="mb-4 flex gap-2 flex-wrap">
+  <button onclick="filterJobs('전체')" class="px-3 py-1 text-sm bg-gray-200 rounded hover:bg-gray-300">전체</button>
+  <button onclick="filterJobs('구인')" class="px-3 py-1 text-sm bg-gray-200 rounded hover:bg-gray-300">구인만 보기</button>
+  <button onclick="filterJobs('구직')" class="px-3 py-1 text-sm bg-gray-200 rounded hover:bg-gray-300">구직만 보기</button>
+</div>
+
+<div class="bg-white p-4 mb-6 rounded shadow-lg">
+  <div class="absolute top-2 right-3 flex gap-1">
+    <button class="text-xs text-gray-500 hover:underline">✏ 수정</button>
+    <button class="text-xs text-green-600 hover:underline">매칭완료</button>
+  </div>
+  <h2 class="text-xl font-semibold mb-1">[테스트밴드]</h2>
+  <p class="text-sm text-gray-600 mb-2">위치: 테스트동 | 구분: 구인</p>
+  <p class="text-sm italic text-gray-700 mb-2">초보 환영! 즐겁게 합주하실 분 구합니다.</p>
+  <ul class="text-sm text-gray-700">
+    <li class="mb-2">🎯 구인 파트:
+      <ul class="ml-4 mt-1 space-y-1">
+        <li class="flex items-center justify-between gap-2">
+          <span>기타</span>
+          <div class="flex flex-col items-end">
+            <button class="text-xs bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded">매칭하기 (0)</button>
+            <span class="text-xs text-gray-500 mt-1">이 밴드에 0명이 매칭시도를 했습니다</span>
+          </div>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</div>
+</body>
+</html>

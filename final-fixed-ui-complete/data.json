@@ -1,0 +1,52 @@
+[
+  {
+    "type": "구인",
+    "team": "어반딕셔너리",
+    "part": [
+      "드럼"
+    ],
+    "matched_parts": {
+      "드럼": null
+    },
+    "location": "소사벌 레포츠타운",
+    "genre": "하드락, K-Rock, 개그락",
+    "intro": "",
+    "password": "1234",
+    "contact": "010-8611-0895",
+    "clicks": 0
+  },
+  {
+    "type": "구인",
+    "team": "SOOROCK",
+    "part": [
+      "여보컬",
+      "키보드"
+    ],
+    "matched_parts": {
+      "여보컬": null,
+      "키보드": null
+    },
+    "location": "소사벌 레포츠타운",
+    "genre": "락, 블루스",
+    "intro": "",
+    "password": "1234",
+    "contact": "010-3365-2819",
+    "clicks": 0
+  },
+  {
+    "type": "구인",
+    "team": "스카이",
+    "part": [
+      "여보컬"
+    ],
+    "matched_parts": {
+      "여보컬": null
+    },
+    "location": "서정동 킴스",
+    "genre": "락, 발라드",
+    "intro": "",
+    "password": "1234",
+    "contact": "010-7722-3949",
+    "clicks": 0
+  }
+]
