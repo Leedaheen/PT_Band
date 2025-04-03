@@ -1,0 +1,124 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>PT Band</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
+</head>
+<body class="bg-gray-100 p-4">
+  <div class="flex justify-between items-center mb-4 border-b pb-2">
+    <h1 class="text-2xl font-bold text-black">📌 평택 직장인/취미 밴드 구인구직 게시판</h1>
+    <button onclick="openForm()" class="text-white bg-blue-600 hover:bg-blue-700 px-4 py-2 text-sm rounded">+</button>
+  </div>
+
+  <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-900 text-sm p-3 rounded mb-6">
+    <strong>※ 공지사항:</strong> 이 게시판은 평택지역 밴드 커뮤니티용입니다. 매너를 지켜주세요!<br />
+    <span class="block mt-1">모든 닉네임은 오픈톡 상 닉네임과 일치시켜주세요 <strong>예)</strong> 홍길동/보컬/30 → <strong>홍길동</strong></span>
+  </div>
+
+  <!-- 리스트 출력 -->
+  {% for job in jobs %}
+  <div class="bg-white rounded shadow p-4 mb-4">
+    <h2 class="text-xl font-bold mb-1">[{{ job.team or '팀명 미정' }}] <span class="text-sm text-gray-500">({{ job.type }})</span></h2>
+    <p class="text-sm"><strong>위치:</strong> {{ job.location or '-' }}</p>
+    <p class="text-sm"><strong>연령대:</strong> {{ job.age or '-' }}</p>
+    <p class="text-sm"><strong>월 회비:</strong> {{ job.fee or '-' }}</p>
+    <p class="text-sm font-bold text-blue-800 mt-2">{{ job.intro or '' }}</p>
+    <div class="text-sm text-right mt-2">👀 매칭시도 {{ job.clicks or 0 }}회</div>
+  </div>
+  {% endfor %}
+
+  <!-- 글쓰기 팝업 템플릿 -->
+  <template id="form-popup">
+    <div class="fixed top-1/2 left-1/2 bg-white p-4 rounded shadow z-50 max-w-sm w-full" style="transform: translate(-50%, -50%)">
+      <div class="text-right">
+        <button onclick="this.closest('div').remove()" class="text-sm text-red-500">✖ 닫기</button>
+      </div>
+      <form id="new-post-form">
+        <p class="mb-2 text-sm font-semibold">글 작성하기</p>
+        <div class="mb-2">
+          <label class="block text-sm font-medium mb-1">구분:</label>
+          <select name="type" class="border p-1 w-full">
+            <option value="구인">구인</option>
+            <option value="구직">구직</option>
+          </select>
+        </div>
+        <div id="form-content"></div>
+        <div class="mt-4 text-right">
+          <button type="submit" class="bg-blue-600 text-white px-3 py-1 rounded">등록</button>
+        </div>
+      </form>
+    </div>
+  </template>
+
+  <script>
+  function openForm() {
+    const tpl = document.querySelector('#form-popup');
+    const clone = tpl.content.cloneNode(true);
+    document.body.appendChild(clone);
+    const formContent = document.querySelector('#form-content');
+    renderFormFields(formContent, '구인');
+
+    document.querySelector('select[name="type"]').onchange = (e) => {
+      renderFormFields(formContent, e.target.value);
+    };
+
+    document.querySelector('#new-post-form').onsubmit = (e) => {
+      e.preventDefault();
+      const form = e.target;
+      const formData = new FormData(form);
+      const data = {
+        type: formData.get("type"),
+        team: formData.get("team") || "",
+        nickname: formData.get("nickname") || "",
+        location: formData.get("location") || "",
+        age: formData.get("age") || "",
+        fee: formData.get("fee") || "",
+        contact: formData.get("contact") || "",
+        intro: formData.get("intro") || "",
+        password: formData.get("password"),
+        part: formData.getAll("part")
+      };
+      fetch("/add", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      }).then(res => res.json()).then(result => {
+        if (result.success) location.reload();
+        else alert("등록 실패");
+      });
+    };
+  }
+
+  function renderFormFields(container, type) {
+    const parts = ['보컬(남)', '보컬(여)', '기타', '베이스', '드럼', '건반', '기타 파트']
+      .map(p => `<label class="mr-2"><input type="checkbox" name="part" value="${p}" class="mr-1" />${p}</label>`).join(' ');
+    if (type === '구인') {
+      container.innerHTML = `
+        <input name="team" placeholder="밴드명 (필수입력)" class="border p-1 w-full mb-2" required />
+        <input name="nickname" placeholder="오픈톡 닉네임 (필수입력)" class="border p-1 w-full mb-2" required />
+        <div class="mb-2"><label class="block text-sm mb-1">구인 파트:</label>${parts}</div>
+        <input name="location" placeholder="연습실 위치 (필수입력)" class="border p-1 w-full mb-2" required />
+        <input name="age" placeholder="연령대 (선택입력)" class="border p-1 w-full mb-2" />
+        <input name="fee" placeholder="월 회비 (선택입력)" class="border p-1 w-full mb-2" />
+        <input name="contact" placeholder="연락처 (필수입력)" class="border p-1 w-full mb-2" required />
+        <textarea name="intro" maxlength="100" placeholder="선호 장르 및 간단한 소개 (100자 이내)" class="border p-1 w-full mb-2"></textarea>
+        <input name="password" type="password" placeholder="비밀번호 (4자리)" class="border p-1 w-full mb-2" required />
+      `;
+    } else {
+      container.innerHTML = `
+        <input name="nickname" placeholder="오픈톡 닉네임 (필수입력)" class="border p-1 w-full mb-2" required />
+        <div class="mb-2"><label class="block text-sm mb-1">구직 파트:</label>${parts}</div>
+        <input name="location" placeholder="선호 연습실 위치 (필수입력)" class="border p-1 w-full mb-2" required />
+        <input name="age" placeholder="연령대 (선택입력)" class="border p-1 w-full mb-2" />
+        <input name="contact" placeholder="연락처 (필수입력)" class="border p-1 w-full mb-2" required />
+        <textarea name="intro" maxlength="100" placeholder="선호 장르 및 간단한 소개 (100자 이내)" class="border p-1 w-full mb-2"></textarea>
+        <input name="password" type="password" placeholder="비밀번호 (4자리)" class="border p-1 w-full mb-2" required />
+      `;
+    }
+  }
+  </script>
+</body>
+</html>
