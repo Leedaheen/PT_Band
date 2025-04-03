@@ -29,15 +29,14 @@
     <button class="text-xs text-gray-600 hover:underline" onclick="openMatchPopup({{ loop.index0 }})">매칭상태 변경</button>
   </div>
   <h2 class="text-xl font-semibold mb-1">[{{ job.team or '팀명 미정' }}] <span class="text-sm text-gray-500 ml-1">({{ job.type }})</span></h2>
-  <p class="text-sm text-gray-600 mb-2"><strong>{{ job.part|join(' / ') }}</strong>{% if job.type == '구인' %} 멤버 필요해요!{% else %} 파트 지원해요 {% endif %}
-</p>
+  <p class="text-sm text-gray-600 mb-2"><strong>{{ job.part|join(' / ') }}</strong>{% if job.type == '구인' %} 멤버 필요해요!{% else %} 파트 지원해요 {% endif %}</p>
 
   <div class="expand-content hidden">
     <p class="text-sm text-gray-600"><strong>오픈톡 닉네임:</strong> {{ job.nickname or '-' }}</p>
     <p class="text-sm text-gray-600"><strong>위치:</strong> {{ job.location or '-' }}</p>
     <p class="text-sm text-gray-600"><strong>연령대:</strong> {{ job.age or '-' }}</p>
     {% if job.fee %}<p class="text-sm text-gray-600"><strong>월 회비:</strong> {{ job.fee }}</p>{% endif %}
-        <p class="text-sm text-navy-700 font-bold">{{ job.intro or '' }}</p>
+    <p class="text-sm text-navy-700 font-bold">{{ job.intro or '' }}</p>
   </div>
 
   <div class="flex justify-between items-center mt-2">
@@ -111,6 +110,7 @@ function openForm() {
 function renderFormFields(container, type) {
   const partChecklist = ['보컬(남)', '보컬(여)', '드럼', '기타', '베이스', '건반', '기타 파트']
     .map(part => `<label class='mr-2'><input type='checkbox' name='part' value='${part}' class='mr-1' />${part}</label>`).join(' ');
+
   if (type === '구인') {
     container.innerHTML = `
       <input required name='team' placeholder='밴드명 필수' class='border p-1 w-full mb-2' />
@@ -121,7 +121,7 @@ function renderFormFields(container, type) {
       <input name='fee' placeholder='월 회비 선택' class='border p-1 w-full mb-2' />
       <input required name='contact' placeholder='연락처 필수' class='border p-1 w-full mb-2' />
       <textarea name='intro' placeholder='선호 장르 및 간단한 소개 (100자 이내)' maxlength='100' class='border p-1 w-full mb-2' oninput="updateCharCount(this)"></textarea>
-<div class='text-right text-xs text-gray-500' id='char-count'>(0/100 byte)</div>
+      <div class='text-right text-xs text-gray-500' id='char-count'>(0/100 byte)</div>
       <input required name='password' type='password' placeholder='비밀번호 4자리' class='border p-1 w-full mb-2' />
     `;
   } else {
@@ -136,8 +136,6 @@ function renderFormFields(container, type) {
     `;
   }
 }
-
-
 
 function openMatchPopup(index) {
   const pw = prompt("비밀번호를 입력하세요 (관리자: admin1234)");
@@ -171,6 +169,17 @@ function openMatchPopup(index) {
     popup.innerHTML = html;
     document.body.appendChild(popup);
 
+    // 매칭 완료된 파트 표시
+    const matchedPartsDiv = document.createElement('div');
+    matchedPartsDiv.classList.add('mt-4');
+    matchedPartsDiv.innerHTML = `
+      <h3 class='text-sm font-semibold text-gray-600'>매칭 완료된 파트:</h3>
+      <ul class='list-disc pl-5'>
+        ${Object.entries(job.matched_parts).map(([part, _]) => `<li class='text-gray-600'>${job.team} - ${part}</li>`).join('')}
+      </ul>
+    `;
+    popup.appendChild(matchedPartsDiv);
+
     document.getElementById('match-form').onsubmit = (e) => {
       e.preventDefault();
       const form = new FormData(e.target);
@@ -190,9 +199,10 @@ function openMatchPopup(index) {
         if (resp.success) location.reload();
         else alert("저장 실패: " + (resp.message || "오류"));
       });
-    }
+    };
   });
 }
+
 function toggleExpand(el) {
   const container = el.closest('.job-item');
   const content = container.querySelector('.expand-content');
@@ -200,10 +210,10 @@ function toggleExpand(el) {
 
   if (content.classList.contains('hidden')) {
     content.classList.remove('hidden');
-    toggleBtn.innerHTML = '&lt;접기&gt;'; toggleBtn.classList.add('text-left');
+    toggleBtn.innerHTML = '&lt;접기&gt;';
   } else {
     content.classList.add('hidden');
-    toggleBtn.innerHTML = '&lt;더 보기&gt;'; toggleBtn.classList.add('text-left');
+    toggleBtn.innerHTML = '&lt;더 보기&gt;';
   }
 }
 
@@ -214,26 +224,5 @@ function updateCharCount(textarea) {
   countDisplay.textContent = `(${length}/100 byte)`;
 }
 </script>
-
-
-{% set has_matched = false %}
-{% for job in jobs %}
-  {% if job.matched_parts and job.matched_parts|length > 0 %}
-    {% set has_matched = true %}
-  {% endif %}
-{% endfor %}
-{% if has_matched %}
-<div class="mt-10">
-  <h2 class="text-lg font-bold text-gray-600 mb-3">✅ 매칭 완료된 항목</h2>
-  {% for job in jobs %}
-    {% if job.matched_parts and job.matched_parts|length > 0 %}
-      <div class="bg-gray-200 text-gray-600 p-2 rounded mb-2">
-        <span class="font-semibold">{{ job.team or '팀명 미정' }}</span>
-        - {{ job.matched_parts.keys()|join(', ') }}
-      </div>
-    {% endif %}
-  {% endfor %}
-</div>
-{% endif %}
 </body>
 </html>
