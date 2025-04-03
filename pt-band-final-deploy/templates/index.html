@@ -137,7 +137,8 @@ function renderFormFields(container, type) {
   }
 }
 
-
+    });
+}
 
 function openMatchPopup(index) {
   const pw = prompt("비밀번호를 입력하세요 (관리자: admin1234)");
@@ -206,7 +207,7 @@ function toggleExpand(el) {
     toggleBtn.innerHTML = '&lt;더 보기&gt;'; toggleBtn.classList.add('text-left');
   }
 }
-
+}
 function updateCharCount(textarea) {
   const countDisplay = document.getElementById('char-count');
   if (!countDisplay) return;
