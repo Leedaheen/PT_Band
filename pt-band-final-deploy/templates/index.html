@@ -33,6 +33,17 @@
       {% endfor %}
     </select>
   </div>
+  
+  <!-- 파트별 필터 -->
+    <div>
+    <label class="text-sm">파트별 필터:</label>
+    {% for part in parts %}
+      <label class="mr-2">
+        <input type="checkbox" class="part-filter" value="{{ part }}" onclick="App.filterParts()"> {{ part }}
+      </label>
+    {% endfor %}
+  </div>
+</div>
 
   {% set emoji_map = {
     '보컬(남)': '🎤', '보컬(여)': '🎤', '드럼': '🥁', '베이스': '🎸', '기타': '🎸', '키보드': '🎹', '그 외': '🔸'
@@ -108,6 +119,14 @@
           item.style.display = (type === '전체' || itemType === type) ? '' : 'none';
         });
       }
+       filterParts: function() {
+      const selectedParts = [...document.querySelectorAll('.part-filter:checked')].map(checkbox => checkbox.value);
+      const jobItems = document.querySelectorAll('.job-item');
+      jobItems.forEach(item => {
+        const itemParts = item.getAttribute('data-parts').split(',');
+        const showItem = selectedParts.length === 0 || itemParts.some(part => selectedParts.includes(part));
+        item.style.display = showItem ? '' : 'none';
+      });
     };
   </script>
 </body>
