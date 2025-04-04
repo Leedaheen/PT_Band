@@ -7,14 +7,19 @@
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
 </head>
 <body class="bg-gray-100 p-4">
-  <!-- 헤더: 제목, 글 추가 버튼, 지역 필터 -->
+  <!-- 헤더: 제목, 글 추가 버튼, 구인/구직 필터, 지역 필터 -->
   <div class="flex justify-between items-center mb-4 border-b pb-2">
     <h1 class="text-2xl md:text-3xl font-bold text-black whitespace-nowrap">
       📌 평택 직장인/취미 밴드 구인구직 게시판
-      <span class="text-sm text-gray-500 ml-1">( {{ regionFilter or '경기도 > 평택시' }} / 전체 )</span>
+      <span class="text-sm text-gray-500 ml-1">( 전체 / 전체 )</span>
     </h1>
     <div class="flex items-center space-x-2">
       <button onclick="App.openForm()" class="text-white bg-blue-600 hover:bg-blue-700 px-4 py-2 text-sm rounded">+</button>
+      <select id="typeFilter" class="border p-1 text-sm">
+        <option value="전체" selected>전체</option>
+        <option value="구인">구인</option>
+        <option value="구직">구직</option>
+      </select>
       <select id="regionFilter" class="border p-1 text-sm">
         <option value="경기도 > 평택시" selected>경기도 > 평택시</option>
         <option value="경기도 > 오산시">경기도 > 오산시</option>
@@ -50,7 +55,10 @@
     '그 외': '🔸'
   } %}
   {% for job in jobs %}
-  <div class="bg-white p-4 mb-6 rounded shadow-lg relative job-item {% if job.pinned %} border-4 border-red-500 {% endif %}" data-type="{{ job.type }}" data-part="{{ job.part|join(',') }}" data-region="{{ job.region or '경기도 > 평택시' }}">
+  <div class="bg-white p-4 mb-6 rounded shadow-lg relative job-item {% if job.pinned %} border-4 border-red-500 {% endif %}" 
+       data-type="{{ job.type }}" 
+       data-part="{{ job.part|join(',') }}" 
+       data-region="{{ job.region or '경기도 > 평택시' }}">
     <div class="absolute top-2 right-3 flex gap-1">
       <button class="text-xs text-gray-600 hover:underline" onclick="App.openMatchPopup({{ loop.index0 }})">매칭상태 변경</button>
     </div>
@@ -87,7 +95,7 @@
         {{ job.intro }}
       {% endif %}
     </p>
-    <!-- 타임스탬프 표시: 수정된 경우 수정 시간, 아니면 등록 시간 -->
+    <!-- 타임스탬프 표시 -->
     <p class="text-xs text-gray-600">
       {% if job.updated_at %}
         {{ job.updated_at | datetimeformat }} 수정
@@ -153,20 +161,26 @@
           const jobItems = document.querySelectorAll('.job-item');
           jobItems.forEach(item => {
             const itemRegion = item.getAttribute('data-region');
-            // 만약 선택이 "전체"라면 모든 게시글을 보여줌
             if (selectedRegion === "전체" || itemRegion === selectedRegion) {
-              // 만약 이미 다른 필터에 의해 숨겨진 경우가 있으면 유지(여기선 단순히 지역 필터만 적용)
-              // 보다 복합적인 필터링을 위해서는 모든 필터 조건을 함께 검사해야 함
+              // 만약 이미 다른 필터에 의해 숨겨진 경우는 다른 필터와 함께 고려해야 함
+              // 여기서는 단순히 지역만 비교합니다.
               item.style.display = "";
             } else {
               item.style.display = "none";
             }
           });
         },
-        filterJobs: function(type) {
-          const items = document.querySelectorAll('.job-item');
-          items.forEach(el => {
-            el.style.display = (type === '전체' || el.dataset.type === type) ? '' : 'none';
+        filterJobs: function() {
+          const typeSelect = document.getElementById('typeFilter');
+          const selectedType = typeSelect ? typeSelect.value : '전체';
+          const jobItems = document.querySelectorAll('.job-item');
+          jobItems.forEach(el => {
+            const jobType = el.getAttribute('data-type');
+            if (selectedType === "전체" || jobType === selectedType) {
+              el.style.display = "";
+            } else {
+              el.style.display = "none";
+            }
           });
           App.filterByParts();
           App.filterByRegion();
@@ -224,6 +238,13 @@
               else alert('등록 실패: ' + (result.message || '오류'));
             });
           }
+        },
+        getPartChecklist: function() {
+          const group1 = ["보컬(남)", "보컬(여)", "드럼", "베이스"];
+          const group2 = ["기타", "키보드", "그 외"];
+          const group1HTML = group1.map(part => `<label class='mr-2'><input type='checkbox' name='part' value='${part}' class='mr-1' />${part}</label>`).join(' ');
+          const group2HTML = group2.map(part => `<label class='mr-2'><input type='checkbox' name='part' value='${part}' class='mr-1' />${part}</label>`).join(' ');
+          return group1HTML + "<br>" + group2HTML;
         },
         renderFormFields: function(container, type) {
           const checklistHTML = App.getPartChecklist();
@@ -367,12 +388,24 @@
           if (!countDisplay) return;
           const length = new Blob([textarea.value]).size;
           countDisplay.textContent = `(${length}/100 byte)`;
+        },
+        filterByRegion: function() {
+          const regionSelect = document.getElementById('regionFilter');
+          const selectedRegion = regionSelect.value;
+          const jobItems = document.querySelectorAll('.job-item');
+          jobItems.forEach(item => {
+            const itemRegion = item.getAttribute('data-region');
+            if (selectedRegion === "전체" || itemRegion === selectedRegion) {
+              item.style.display = "";
+            } else {
+              item.style.display = "none";
+            }
+          });
         }
       };
   
-      document.getElementById('regionFilter').addEventListener('change', function() {
-        App.filterByRegion();
-      });
+      document.getElementById('typeFilter').addEventListener('change', App.filterJobs);
+      document.getElementById('regionFilter').addEventListener('change', App.filterJobs);
   
       document.addEventListener('change', function(e) {
         if (e.target.classList.contains('part-filter')) {
