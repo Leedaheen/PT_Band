@@ -1,14 +1,15 @@
+# === app.py ===
 from flask import Flask, render_template, request, jsonify, session
 import json, os, time, datetime
 from hashlib import sha256
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key_here'  # 반드시 안전한 비밀키로 변경하세요.
+app.secret_key = 'your_secret_key_here'
 DATA_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data.json")
 
+# === 데이터 로딩 및 저장 ===
 def load_data():
-    if not os.path.exists(DATA_FILE):
-        return []
+    if not os.path.exists(DATA_FILE): return []
     with open(DATA_FILE, "r", encoding="utf-8") as f:
         return json.load(f)
 
@@ -16,42 +17,43 @@ def save_data(data):
     with open(DATA_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
+# === 정렬 기준 ===
 def sort_key(job):
-    # pinned 값을 boolean으로 변환
     pinned = job.get("pinned", False)
     if isinstance(pinned, str):
         pinned = pinned.lower() == "true"
-    # created_at 값을 타임스탬프로 변환 (ISO 8601 문자열 또는 int로 저장됨)
     created = job.get("created_at", 0)
     if isinstance(created, str):
         try:
             created = datetime.datetime.fromisoformat(created).timestamp()
-        except Exception:
-            created = 0
+        except: created = 0
     return (pinned, created)
+
+@app.template_filter('datetimeformat')
+def datetimeformat(value, format='%Y-%m-%d %H:%M'):
+    try:
+        if isinstance(value, (int, float)):
+            return time.strftime(format, time.localtime(value))
+        elif isinstance(value, str):
+            dt = datetime.datetime.fromisoformat(value)
+            return dt.strftime(format)
+    except: return value
 
 @app.route("/")
 def index():
-    jobs = load_data()  # jobs 변수를 여기서 정의
-    # pinned 상태와 created_at 기준 내림차순 정렬 (최신 및 상단 고정 글이 위쪽에 오도록)
+    jobs = load_data()
     jobs.sort(key=sort_key, reverse=True)
-       emoji_map = {
-        "보컬(남)": "🎤",
-        "보컬(여)": "🎤",
-        "드럼": "🥁",
-        "기타": "🎸",
-        "베이스": "🎸",
-        "키보드": "🎹",
-        "기타 파트": "🎶"
+    emoji_map = {
+        "보컬(남)": "🎤", "보컬(여)": "🎤", "드럼": "🥁",
+        "기타": "🎸", "베이스": "🎸", "키보드": "🎹", "기타 파트": "🎶"
     }
-
-    return render_template("index.html", jobs=jobs, emoji_map=emoji_map)
+    locations = sorted(set(job.get('location', '') for job in jobs if job.get('location')))
+    return render_template("index.html", jobs=jobs, emoji_map=emoji_map, locations=locations)
 
 @app.route("/add", methods=["POST"])
 def add_job():
     item = request.get_json()
-    if not item:
-        return jsonify(success=False, message="No data provided")
+    if not item: return jsonify(success=False, message="No data")
     data = load_data()
     item["clicks"] = 0
     item["matched_parts"] = {}
@@ -82,8 +84,7 @@ def click(index):
 def verify_password(index):
     req = request.get_json()
     data = load_data()
-    if index >= len(data):
-        return jsonify(success=False)
+    if index >= len(data): return jsonify(success=False)
     input_pw = sha256(req["password"].encode()).hexdigest()
     is_admin = req["password"] == "admin1234"
     if is_admin or input_pw == data[index]["password"]:
@@ -94,24 +95,19 @@ def verify_password(index):
 def update(index):
     req = request.get_json()
     data = load_data()
-    if index >= len(data):
-        return jsonify(success=False)
+    if index >= len(data): return jsonify(success=False)
     pw_hash = sha256(req["password"].encode()).hexdigest()
     is_admin = req["password"] == "admin1234"
     if not is_admin and pw_hash != data[index]["password"]:
         return jsonify(success=False, message="비밀번호 불일치")
-    data[index]["team"] = req["team"]
-    data[index]["location"] = req["location"]
-    data[index]["type"] = req["type"]
-    data[index]["age"] = req.get("age", "")
-    data[index]["intro"] = req["intro"]
-    matched = {}
-    for part in req.get("parts", []):
-        matched[part] = True
-    data[index]["matched_parts"] = matched
-    if is_admin:
-        data[index]["pinned"] = True if req.get("pinned") == "true" else False
-        data[index]["updated_at"] = int(time.time())
+    data[index].update({
+        "team": req["team"], "location": req["location"],
+        "type": req["type"], "age": req.get("age", ""),
+        "intro": req["intro"],
+        "matched_parts": {p: True for p in req.get("parts", [])},
+        "updated_at": int(time.time()) if is_admin else data[index].get("updated_at"),
+        "pinned": True if is_admin and req.get("pinned") == "true" else False
+    })
     save_data(data)
     return jsonify(success=True)
 
