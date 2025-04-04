@@ -16,12 +16,16 @@ def save_data(data):
     with open(DATA_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
+def sort_key(job):
+    return (not job.get("pinned", False), job.get("created_at", 0))
+
 @app.route("/")
 def index():
     jobs = load_data()
-    # 상단 고정(pinned) 게시글을 우선, 그 다음 생성 시간(created_at) 내림차순 정렬
+    # jobs.sort(key=sort_key, reverse=True) 대신 아래와 같이 lambda를 사용
     jobs.sort(key=lambda job: (not job.get("pinned", False), job.get("created_at", 0)), reverse=True)
     return render_template("index.html", jobs=jobs)
+
 
 @app.route("/add", methods=["POST"])
 def add_job():
