@@ -77,7 +77,7 @@
         {% elif job.created_at %}
           <p class="text-xs text-gray-400 mb-1">🕒 {{ job.created_at | datetimeformat('%Y-%m-%d %H:%M') }} 등록</p>
         {% endif %}
-        <a href="tel:{{ job.contact }}" onclick="fetch('/click/{{ loop.index0 }}', { method: 'POST' })" class="text-xs bg-blue-500 hover:bg-blue-600 text-white px-2 py-[6px] rounded block w-fit mx-auto">매칭하기</a>
+        <a href="tel:{{ job.contact }}" onclick="fetch('/click/{{ loop.index0 }}', { method: 'POST' })" class="text-xs bg-blue-500 hover:bg-blue-600 text-white px-2 py-[6px] rounded block w-fit mx-auto">연락처 확인</a>
         <p class="text-xs text-gray-400 mt-1">👁 {{ job.clicks or 0 }}명이 연락처를 확인했어요</p>
       </div>
     </div>
