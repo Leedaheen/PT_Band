@@ -35,7 +35,17 @@ def index():
     jobs = load_data()  # jobs 변수를 여기서 정의
     # pinned 상태와 created_at 기준 내림차순 정렬 (최신 및 상단 고정 글이 위쪽에 오도록)
     jobs.sort(key=sort_key, reverse=True)
-    return render_template("index.html", jobs=jobs)
+       emoji_map = {
+        "보컬(남)": "🎤",
+        "보컬(여)": "🎤",
+        "드럼": "🥁",
+        "기타": "🎸",
+        "베이스": "🎸",
+        "키보드": "🎹",
+        "기타 파트": "🎶"
+    }
+
+    return render_template("index.html", jobs=jobs, emoji_map=emoji_map)
 
 @app.route("/add", methods=["POST"])
 def add_job():
