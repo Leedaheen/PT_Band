@@ -40,7 +40,8 @@ def index():
     jobs = load_data()
     jobs.sort(key=sort_key, reverse=True)
     locations = sorted(set(job.get("region", "경기도 > 평택시") for job in jobs))
-    return render_template("index.html", jobs=jobs, locations=locations)
+    types = ["전체", "구인", "구직"]
+    return render_template("index.html", jobs=jobs, locations=locations, types=types)
 
 @app.route("/add", methods=["POST"])
 def add_job():
