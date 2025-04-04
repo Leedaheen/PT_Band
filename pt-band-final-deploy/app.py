@@ -17,15 +17,24 @@ def save_data(data):
         json.dump(data, f, ensure_ascii=False, indent=2)
 
 def sort_key(job):
-    return (not job.get("pinned", False), job.get("created_at", 0))
+    # pinned 값을 boolean으로 변환
+    pinned = job.get("pinned", False)
+    if isinstance(pinned, str):
+        pinned = pinned.lower() == "true"
+    # 생성 시간(created_at)을 타임스탬프로 변환 (문자열인 경우 ISO 8601 형식으로 가정)
+    created = job.get("created_at", 0)
+    if isinstance(created, str):
+        try:
+            created = datetime.datetime.fromisoformat(created).timestamp()
+        except Exception:
+            created = 0
+    return (pinned, created)
 
 @app.route("/")
 def index():
-    jobs = load_data()
-    # jobs.sort(key=sort_key, reverse=True) 대신 아래와 같이 lambda를 사용
-    jobs.sort(key=lambda job: (not job.get("pinned", False), job.get("created_at", 0)), reverse=True)
+    jobs = load_data()  # jobs 변수를 여기서 정의
+    jobs.sort(key=sort_key, reverse=True)
     return render_template("index.html", jobs=jobs)
-
 
 @app.route("/add", methods=["POST"])
 def add_job():
