@@ -101,10 +101,19 @@ export default function() {
     } else {
       container.innerHTML = `
         <input required name='nickname' placeholder='오픈톡 닉네임 (필수)' class='border p-1 w-full mb-2' />
-        <div class='mb-2'><label class='block mb-1'>구직 파트:</label>${checklistHTML}</div>
-        <input required name='location' placeholder='선호 연습실 위치 (필수)' class='border p-1 w-full mb-2' />
+        <div class='mb-2'><label class='block mb-1'>구직 파트:</label>
+          <div class='grid grid-cols-2 gap-4'>
+            <div><input type='checkbox' name='part' value='보컬(남)' class='mr-1' />보컬(남)</div>
+            <div><input type='checkbox' name='part' value='보컬(여)' class='mr-1' />보컬(여)</div>
+            <div><input type='checkbox' name='part' value='드럼' class='mr-1' />드럼</div>
+            <div><input type='checkbox' name='part' value='베이스' class='mr-1' />베이스</div>
+            <div><input type='checkbox' name='part' value='기타' class='mr-1' />기타</div>
+            <div><input type='checkbox' name='part' value='키보드' class='mr-1' />키보드</div>
+            <div><input type='checkbox' name='part' value='그 외' class='mr-1' />그 외</div>
+          </div>
+        </div>
+        <input required name='age' placeholder='나이' class='border p-1 w-full mb-2' />
         ${regionSelectHTML}
-        <input name='age' placeholder='멤버 연령대' class='border p-1 w-full mb-2' />
         <input required name='contact' placeholder='연락처 (필수)' class='border p-1 w-full mb-2' />
         <textarea name='intro' placeholder='선호 장르 및 간단한 소개 (100자 이내)' maxlength='100' class='border p-1 w-full mb-2'></textarea>
         <input required name='password' type='password' maxlength='4' placeholder='비밀번호 (4자리)' class='border p-1 w-full mb-2' />
