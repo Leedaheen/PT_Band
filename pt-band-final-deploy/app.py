@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, jsonify, session
-import json, os, time
+import json, os, time, datetime
 from hashlib import sha256
 
 app = Flask(__name__)
@@ -89,6 +89,24 @@ def update(index):
         data[index]["pinned"] = True if req.get("pinned") == "true" else False
     save_data(data)
     return jsonify(success=True)
+
+def sort_key(job):
+    # 고정됨(pinned) 값을 boolean으로 변환 (문자열이면 소문자로 비교)
+    pinned = job.get("고정됨", False)
+    if isinstance(pinned, str):
+        pinned = pinned.lower() == "true"
+    # 생성_시간은 ISO 8601 형식의 문자열이라 가정하고, 타임스탬프로 변환
+    created_str = job.get("생성_시간", None)
+    if created_str:
+        try:
+            created_time = datetime.datetime.fromisoformat(created_str).timestamp()
+        except Exception as e:
+            created_time = 0
+    else:
+        created_time = 0
+    return (pinned, created_time)
+
+jobs.sort(key=sort_key, reverse=True)
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
