@@ -37,7 +37,7 @@
 
 <!-- 파트별 필터 -->
 <div class="flex space-x-2 mb-6">
-  <label class="text-sm">파트별 필터:</label>
+  <label class="text-sm">파트 :</label>
   {% for part in parts %}
     <label class="mr-2">
       <input type="checkbox" class="part-filter" value="{{ part }}" onclick="App.filterParts()"> {{ part }}
