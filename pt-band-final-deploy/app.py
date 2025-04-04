@@ -3,7 +3,7 @@ import json, os, time, datetime
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key_here'
+app.secret_key = 'dl9ek1gmls032601086541230'
 DATA_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data.json")
 
 # 데이터 로드 함수
