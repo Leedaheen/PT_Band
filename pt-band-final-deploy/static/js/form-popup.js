@@ -1,5 +1,6 @@
 export default function() {
-  // 팝업창 HTML 구조 생성
+  console.log("팝업창 열림");  // 디버깅용 로그
+
   const popup = document.createElement('div');
   popup.className = 'fixed top-1/2 left-1/2 bg-white p-4 rounded shadow z-50 max-w-sm w-full';
   popup.style.transform = 'translate(-50%, -50%)';
