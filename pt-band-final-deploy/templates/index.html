@@ -76,7 +76,8 @@
     <div class="expand-content hidden">
       <p class="text-sm text-gray-600"><strong>오픈톡 닉네임:</strong> {{ job.nickname or '-' }}</p>
       <p class="text-sm text-gray-600"><strong>위치:</strong> {{ job.location or '-' }}</p>
-      <p class="text-sm text-gray-600"><strong>연령대:</strong> {{ job.age or '-' }}</p>
+      <!-- '연령대' 항목을 '나이'로 변경 -->
+      <p class="text-sm text-gray-600"><strong>나이:</strong> {{ job.age or '-' }}</p>
       {% if job.fee %}<p class="text-sm text-gray-600"><strong>월 회비:</strong> {{ job.fee }}</p>{% endif %}
     </div>
 
@@ -96,6 +97,7 @@
     </div>
   </div>
 {% endfor %}
+
 
 
 
