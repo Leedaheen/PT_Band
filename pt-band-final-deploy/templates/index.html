@@ -37,7 +37,7 @@
     '키보드': '🎹',
     '그 외': '🔸'
   } %}
-
+  
   <!-- 게시글 목록 -->
   {% for job in jobs %}
   <div class="bg-white p-4 mb-6 rounded shadow relative job-item {% if job.pinned %}border-2 border-yellow-400{% endif %}" data-type="{{ job.type }}" data-location="{{ job.location }}">
