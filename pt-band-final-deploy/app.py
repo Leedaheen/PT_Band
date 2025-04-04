@@ -1,7 +1,6 @@
 from flask import Flask, render_template, request, jsonify, session
 import json, os, time, datetime
-from hashlib import sha256
-import bcrypt
+from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key_here'
@@ -60,12 +59,12 @@ def add_job():
         return jsonify(success=False, message="No data provided")
     data = load_data()
     
-    # 비밀번호 암호화 (bcrypt 사용)
-    hashed_pw = bcrypt.hashpw(item["password"].encode('utf-8'), bcrypt.gensalt())
+    # 비밀번호 암호화 (werkzeug.security 사용)
+    hashed_pw = generate_password_hash(item["password"])
     
     item["clicks"] = 0
     item["matched_parts"] = {}
-    item["password"] = hashed_pw.decode('utf-8')
+    item["password"] = hashed_pw  # 해시된 비밀번호 저장
     item["created_at"] = int(time.time())
     item["pinned"] = False
     data.append(item)
@@ -95,11 +94,11 @@ def verify_password(index):
     if index >= len(data):
         return jsonify(success=False)
     
-    # bcrypt로 비밀번호 확인
-    input_pw = req["password"].encode('utf-8')
-    stored_pw = data[index]["password"].encode('utf-8')
+    # werkzeug.security로 비밀번호 검증
+    input_pw = req["password"]
+    stored_pw = data[index]["password"]
     
-    if bcrypt.checkpw(input_pw, stored_pw):
+    if check_password_hash(stored_pw, input_pw):  # 입력 비밀번호가 저장된 비밀번호와 일치하는지 확인
         return jsonify(success=True, job=data[index])
     return jsonify(success=False)
 
@@ -110,11 +109,11 @@ def update(index):
     if index >= len(data):
         return jsonify(success=False)
     
-    # 비밀번호 검증
-    input_pw = req["password"].encode('utf-8')
-    stored_pw = data[index]["password"].encode('utf-8')
+    # 비밀번호 검증 (werkzeug.security 사용)
+    input_pw = req["password"]
+    stored_pw = data[index]["password"]
     
-    if not bcrypt.checkpw(input_pw, stored_pw):
+    if not check_password_hash(stored_pw, input_pw):
         return jsonify(success=False, message="비밀번호 불일치")
     
     # 업데이트된 내용 적용
