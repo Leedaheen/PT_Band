@@ -21,7 +21,7 @@ def sort_key(job):
     pinned = job.get("pinned", False)
     if isinstance(pinned, str):
         pinned = pinned.lower() == "true"
-    # 생성 시간(created_at)을 타임스탬프로 변환 (문자열인 경우 ISO 8601 형식으로 가정)
+    # created_at 값을 타임스탬프로 변환 (ISO 8601 문자열 또는 int로 저장됨)
     created = job.get("created_at", 0)
     if isinstance(created, str):
         try:
@@ -33,6 +33,7 @@ def sort_key(job):
 @app.route("/")
 def index():
     jobs = load_data()  # jobs 변수를 여기서 정의
+    # pinned 상태와 created_at 기준 내림차순 정렬 (최신 및 상단 고정 글이 위쪽에 오도록)
     jobs.sort(key=sort_key, reverse=True)
     return render_template("index.html", jobs=jobs)
 
@@ -100,26 +101,9 @@ def update(index):
     data[index]["matched_parts"] = matched
     if is_admin:
         data[index]["pinned"] = True if req.get("pinned") == "true" else False
+        data[index]["updated_at"] = int(time.time())
     save_data(data)
     return jsonify(success=True)
-
-def sort_key(job):
-    # 고정됨(pinned) 값을 boolean으로 변환 (문자열이면 소문자로 비교)
-    pinned = job.get("고정됨", False)
-    if isinstance(pinned, str):
-        pinned = pinned.lower() == "true"
-    # 생성_시간은 ISO 8601 형식의 문자열이라 가정하고, 타임스탬프로 변환
-    created_str = job.get("생성_시간", None)
-    if created_str:
-        try:
-            created_time = datetime.datetime.fromisoformat(created_str).timestamp()
-        except Exception as e:
-            created_time = 0
-    else:
-        created_time = 0
-    return (pinned, created_time)
-
-jobs.sort(key=sort_key, reverse=True)
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
