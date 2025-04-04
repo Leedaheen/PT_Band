@@ -1,21 +1,37 @@
 from flask import Flask, render_template, request, jsonify, session
 import json, os, time, datetime
 from hashlib import sha256
+import bcrypt
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key_here'
 DATA_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data.json")
 
+# 데이터 로드 함수
 def load_data():
     if not os.path.exists(DATA_FILE):
         return []
     with open(DATA_FILE, "r", encoding="utf-8") as f:
         return json.load(f)
 
+# 데이터 저장 함수
 def save_data(data):
     with open(DATA_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
+# 타임스탬프 포맷 필터 (ISO 형식 및 정수형 처리)
+@app.template_filter('datetimeformat')
+def format_datetime(value, format='%Y-%m-%d %H:%M'):
+    try:
+        if isinstance(value, str):
+            value = datetime.datetime.fromisoformat(value)
+        elif isinstance(value, int):  # 타임스탬프가 int일 경우 처리
+            value = datetime.datetime.fromtimestamp(value)
+        return value.strftime(format) if isinstance(value, datetime.datetime) else value
+    except Exception:
+        return value
+
+# 구인/구직 항목 정렬 함수
 def sort_key(job):
     pinned = job.get("pinned", False)
     if isinstance(pinned, str):
@@ -28,22 +44,14 @@ def sort_key(job):
             updated = 0
     return (pinned, updated)
 
-@app.template_filter('datetimeformat')
-def format_datetime(value, format='%Y-%m-%d %H:%M'):
-    try:
-        if isinstance(value, str):
-            value = datetime.datetime.fromisoformat(value)
-        return value.strftime(format) if isinstance(value, datetime.datetime) else value
-    except Exception:
-        return value
-
 @app.route("/")
 def index():
     jobs = load_data()
     jobs.sort(key=sort_key, reverse=True)
     locations = sorted(set(job.get("region", "경기도 > 평택시") for job in jobs))
     types = ["전체", "구인", "구직"]
-    return render_template("index.html", jobs=jobs, locations=locations, types=types)
+    parts = sorted(set(part for job in jobs for part in job.get("part", [])))
+    return render_template("index.html", jobs=jobs, locations=locations, types=types, parts=parts)
 
 @app.route("/add", methods=["POST"])
 def add_job():
@@ -51,9 +59,13 @@ def add_job():
     if not item:
         return jsonify(success=False, message="No data provided")
     data = load_data()
+    
+    # 비밀번호 암호화 (bcrypt 사용)
+    hashed_pw = bcrypt.hashpw(item["password"].encode('utf-8'), bcrypt.gensalt())
+    
     item["clicks"] = 0
     item["matched_parts"] = {}
-    item["password"] = sha256(item["password"].encode()).hexdigest()
+    item["password"] = hashed_pw.decode('utf-8')
     item["created_at"] = int(time.time())
     item["pinned"] = False
     data.append(item)
@@ -82,9 +94,12 @@ def verify_password(index):
     data = load_data()
     if index >= len(data):
         return jsonify(success=False)
-    input_pw = sha256(req["password"].encode()).hexdigest()
-    is_admin = req["password"] == "admin1234"
-    if is_admin or input_pw == data[index]["password"]:
+    
+    # bcrypt로 비밀번호 확인
+    input_pw = req["password"].encode('utf-8')
+    stored_pw = data[index]["password"].encode('utf-8')
+    
+    if bcrypt.checkpw(input_pw, stored_pw):
         return jsonify(success=True, job=data[index])
     return jsonify(success=False)
 
@@ -94,11 +109,15 @@ def update(index):
     data = load_data()
     if index >= len(data):
         return jsonify(success=False)
-    pw_hash = sha256(req["password"].encode()).hexdigest()
-    is_admin = req["password"] == "admin1234"
-    if not is_admin and pw_hash != data[index]["password"]:
+    
+    # 비밀번호 검증
+    input_pw = req["password"].encode('utf-8')
+    stored_pw = data[index]["password"].encode('utf-8')
+    
+    if not bcrypt.checkpw(input_pw, stored_pw):
         return jsonify(success=False, message="비밀번호 불일치")
-
+    
+    # 업데이트된 내용 적용
     data[index]["team"] = req["team"]
     data[index]["location"] = req["location"]
     data[index]["type"] = req["type"]
@@ -107,11 +126,9 @@ def update(index):
     data[index]["region"] = req.get("region", "경기도 > 평택시")
     data[index]["updated_at"] = int(time.time())
 
+    # 파트 매칭 업데이트
     matched = {part: True for part in req.get("parts", [])}
     data[index]["matched_parts"] = matched
-
-    if is_admin:
-        data[index]["pinned"] = True if req.get("pinned") == "true" else False
 
     save_data(data)
     return jsonify(success=True)
