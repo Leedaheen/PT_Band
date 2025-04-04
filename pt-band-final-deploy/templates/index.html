@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>구인/구직 게시판</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
+</head>
+<body class="bg-gray-100 p-4">
+  <!-- 상단: 제목, 필터, 글작성 버튼 -->
+  <div class="flex flex-wrap justify-between items-center mb-4 border-b pb-2">
+    <h1 class="text-xl sm:text-2xl md:text-3xl font-bold text-black whitespace-nowrap">📌 평택 직장인/취미 밴드 구인구직 게시판</h1>
+    <div class="flex gap-2">
+      <button onclick="App.openForm()" class="text-white bg-blue-600 hover:bg-blue-700 px-4 py-2 text-sm rounded">글 작성</button>
+      <select id="regionFilter" class="border p-1 text-sm">
+        <option value="전체">전체</option>
+        {% for location in locations %}
+        <option value="{{ location }}">{{ location }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+
+  <!-- 공지사항 복원 -->
+  <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-900 text-sm p-3 rounded mb-6">
+    <strong>※ 공지사항:</strong> 이 게시판은 평택지역 밴드 커뮤니티용입니다. 매너를 지켜주세요!<br>
+    <span class="block mt-1">모든 닉네임은 오픈톡 상 닉네임과 일치시켜주세요 <strong>예)</strong> 홍길동/보컬/30 → <strong>홍길동</strong></span>
+  </div>
+
+  <!-- 이모지 매핑 -->
+  {% set emoji_map = {
+    '보컬(남)': '🎤',
+    '보컬(여)': '🎤',
+    '드럼': '🥁',
+    '베이스': '🎸',
+    '기타': '🎸',
+    '키보드': '🎹',
+    '그 외': '🔸'
+  } %}
+
+  <!-- 게시글 목록 -->
+  {% for job in jobs %}
+  <div class="bg-white p-4 mb-6 rounded shadow relative job-item {% if job.pinned %}border-2 border-yellow-400{% endif %}" data-type="{{ job.type }}" data-location="{{ job.location }}">
+    {% if job.pinned %}<span class="absolute top-2 left-2 text-yellow-500 font-bold text-xs">📌 상단고정</span>{% endif %}
+    <div class="absolute top-2 right-3 flex gap-2">
+      <button class="text-xs text-gray-600 hover:underline" onclick="App.openMatchPopup({{ loop.index0 }})">매칭상태 변경</button>
+    </div>
+    <h2 class="text-lg font-semibold mb-1">
+      {% if job.type == '구직' %}
+        [ {% for part in job.part %}{{ emoji_map.get(part, '') }}{{ part }}{% if not loop.last %} / {% endif %}{% endfor %} ]
+      {% else %}
+        [{{ job.team or '팀명 미정' }}]
+      {% endif %}
+      <span class="text-sm text-gray-500 ml-1">({{ job.region or '경기도 > 평택시' }} / {{ '데려가세요!' if job.type == '구직' else '모집합니다!' }})</span>
+    </h2>
+
+    <p class="text-sm text-gray-600 mb-2">
+      <strong>
+        {% for part in job.part %}{{ emoji_map.get(part, '') }}{{ part }}{% if not loop.last %} / {% endif %}{% endfor %}
+      </strong><br>
+      {% if job.type == '구인' %}{{ job.part[0] }} 멤버가 필요해요!{% else %}<br>{{ job.intro or '' }}<br>{% endif %}
+    </p>
+
+    <div class="expand-content hidden">
+      <p class="text-sm text-gray-600"><strong>오픈톡 닉네임:</strong> {{ job.nickname or '-' }}</p>
+      <p class="text-sm text-gray-600"><strong>위치:</strong> {{ job.location or '-' }}</p>
+      <p class="text-sm text-gray-600"><strong>연령대:</strong> {{ job.age or '-' }}</p>
+      {% if job.fee %}<p class="text-sm text-gray-600"><strong>월 회비:</strong> {{ job.fee }}</p>{% endif %}
+    </div>
+
+    <div class="flex justify-between items-end mt-2">
+      <span class="text-xs text-blue-500 cursor-pointer" onclick="App.toggleExpand(this)">&lt;더 보기&gt;</span>
+      <div class="text-right">
+        {% if job.updated_at %}
+          <p class="text-xs text-gray-400 mb-1">🕒 {{ job.updated_at | datetimeformat }} 수정</p>
+        {% elif job.created_at %}
+          <p class="text-xs text-gray-400 mb-1">🕒 {{ job.created_at | datetimeformat }} 등록</p>
+        {% endif %}
+        <a href="tel:{{ job.contact }}" onclick="fetch('/click/{{ loop.index0 }}', { method: 'POST' })" class="text-xs bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded block">매칭하기</a>
+        <p class="text-[11px] text-gray-500 mt-1">👁 {{ job.clicks or 0 }}명이 이 연락처를 눌러봤어요</p>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
