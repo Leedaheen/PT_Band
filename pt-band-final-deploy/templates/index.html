@@ -57,15 +57,22 @@
     <p class="text-sm text-gray-600 mb-2">
       <strong>
         {% for part in job.part %}{{ emoji_map.get(part, '') }}{{ part }}{% if not loop.last %} / {% endif %}{% endfor %}
-      </strong><br>
-      {% if job.type == '구인' %}{{ job.part[0] }} 멤버가 필요해요!{% else %}<br>{{ job.intro or '' }}<br>{% endif %}
+      </strong>
+      {% if job.type == '구인' %}
+        <br>{{ job.part[0] }} 멤버가 필요해요!
+      {% else %}
+        <br>{{ job.intro or '' }}
+      {% endif %}
     </p>
 
+    <!-- 확장 영역에 글작성 전체 정보 표시 (연락처 제외) -->
     <div class="expand-content hidden">
       <p class="text-sm text-gray-600"><strong>오픈톡 닉네임:</strong> {{ job.nickname or '-' }}</p>
       <p class="text-sm text-gray-600"><strong>위치:</strong> {{ job.location or '-' }}</p>
       <p class="text-sm text-gray-600"><strong>연령대:</strong> {{ job.age or '-' }}</p>
       {% if job.fee %}<p class="text-sm text-gray-600"><strong>월 회비:</strong> {{ job.fee }}</p>{% endif %}
+      <p class="text-sm text-gray-600"><strong>소개:</strong> {{ job.intro or '-' }}</p>
+      <p class="text-sm text-gray-600"><strong>지역:</strong> {{ job.region or '-' }}</p>
     </div>
 
     <div class="flex justify-between items-end mt-2">
