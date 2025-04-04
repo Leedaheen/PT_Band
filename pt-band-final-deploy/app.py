@@ -29,10 +29,12 @@ def sort_key(job):
     return (pinned, updated)
 
 @app.template_filter('datetimeformat')
-def format_datetime(value):
+def format_datetime(value, format='%Y-%m-%d %H:%M'):
     try:
-        return datetime.datetime.fromtimestamp(int(value)).strftime('%Y-%m-%d %H:%M')
-    except:
+        if isinstance(value, str):
+            value = datetime.datetime.fromisoformat(value)
+        return value.strftime(format) if isinstance(value, datetime.datetime) else value
+    except Exception:
         return value
 
 @app.route("/")
