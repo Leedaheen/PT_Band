@@ -91,16 +91,23 @@ def click(index):
 def verify_password(index):
     req = request.get_json()
     data = load_data()
+
+    # 인덱스가 데이터에 존재하는지 확인
     if index >= len(data):
-        return jsonify(success=False)
-    
-    # werkzeug.security로 비밀번호 검증
-    input_pw = req["password"]
-    stored_pw = data[index]["password"]
-    
-    if check_password_hash(stored_pw, input_pw):  # 입력 비밀번호가 저장된 비밀번호와 일치하는지 확인
+        return jsonify(success=False, message="잘못된 데이터입니다.")
+
+    input_pw = req["password"]  # 사용자가 입력한 비밀번호
+
+    # 관리자 비밀번호 확인
+    is_admin = input_pw == "admin1234"  # 관리자 비밀번호와 비교
+    if is_admin:
         return jsonify(success=True, job=data[index])
-    return jsonify(success=False)
+
+    # 사용자 비밀번호 비교 (해시화된 비밀번호와 비교)
+    if check_password_hash(data[index]["password"], input_pw):  # 저장된 해시된 비밀번호와 비교
+        return jsonify(success=True, job=data[index])
+
+    return jsonify(success=False, message="비밀번호가 일치하지 않습니다.")
 
 @app.route("/update/<int:index>", methods=["POST"])
 def update(index):
