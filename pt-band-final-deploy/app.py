@@ -113,17 +113,23 @@ def verify_password(index):
 def update(index):
     req = request.get_json()
     data = load_data()
+
     if index >= len(data):
-        return jsonify(success=False)
-    
-    # 비밀번호 검증 (werkzeug.security 사용)
+        return jsonify(success=False, message="잘못된 데이터입니다.")
+
+    # 입력된 비밀번호
     input_pw = req["password"]
-    stored_pw = data[index]["password"]
     
-    if not check_password_hash(stored_pw, input_pw):
-        return jsonify(success=False, message="비밀번호 불일치")
+    # 관리자 비밀번호 확인 (관리자 비밀번호는 평문으로 비교)
+    is_admin = input_pw == "admin1234"
+    if is_admin:
+        return jsonify(success=True, message="관리자 권한으로 수정 가능합니다.")
     
-    # 업데이트된 내용 적용
+    # 사용자가 입력한 비밀번호를 해시화된 비밀번호와 비교
+    if not check_password_hash(data[index]["password"], input_pw):
+        return jsonify(success=False, message="비밀번호가 일치하지 않습니다.")  # 비밀번호 불일치 시 종료
+    
+    # 비밀번호가 맞으면 수정 진행
     data[index]["team"] = req["team"]
     data[index]["location"] = req["location"]
     data[index]["type"] = req["type"]
@@ -132,12 +138,14 @@ def update(index):
     data[index]["region"] = req.get("region", "경기도 > 평택시")
     data[index]["updated_at"] = int(time.time())
 
-    # 파트 매칭 업데이트
     matched = {part: True for part in req.get("parts", [])}
     data[index]["matched_parts"] = matched
 
+    if is_admin:
+        data[index]["pinned"] = True if req.get("pinned") == "true" else False
+
     save_data(data)
-    return jsonify(success=True)
+    return jsonify(success=True, message="수정이 완료되었습니다.")
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
