@@ -119,8 +119,16 @@
   },
 
   openMatchPopup: function(index) {
-    import('/static/js/match-popup.js').then(module => module.default(index));
-  },
+    import('/static/js/match-popup.js')  // match-popup.js 파일을 비동기적으로 로드
+      .then(module => {
+        module.default(index);  // match-popup.js에서 제공하는 기본 함수 호출
+      })
+      .catch(err => {
+        console.error("match-popup.js 로딩 오류: ", err);  // 로드 오류 확인
+      });
+  }
+};
+
 
   // 구인/구직/매칭완료 필터링
   filterJobs: function(type) {
