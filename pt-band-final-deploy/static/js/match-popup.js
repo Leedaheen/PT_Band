@@ -1,11 +1,7 @@
 export default function openMatchPopup(index) {
-  const job = jobs[index];  // 해당 job 정보 가져오기
-  const isJobTypeRecruit = job.type === '구인'; // 구인/구직 구분
+  const pw = prompt("비밀번호를 입력하세요");  // 비밀번호 입력
+  if (!pw) return;  // 비밀번호가 없으면 종료
 
-  const pw = prompt("비밀번호를 입력하세요");
-  if (!pw) return;  // 비밀번호가 입력되지 않으면 종료
-
-  // 비밀번호 확인을 위한 요청
   fetch(`/verify-password/${index}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -14,7 +10,6 @@ export default function openMatchPopup(index) {
   .then(res => res.json())
   .then(data => {
     if (!data.success) return alert("비밀번호가 일치하지 않습니다.");
-
     const job = data.job;  // 비밀번호가 맞으면 job 정보 받아옴
     const parts = job.part || [];  // 구직 파트 정보
     const partOptions = parts.map(part => `
@@ -46,24 +41,10 @@ export default function openMatchPopup(index) {
           <option value="서울특별시 > 강남구" ${job.region === "서울특별시 > 강남구" ? 'selected' : ''}>서울특별시 > 강남구</option>
           <option value="부산광역시 > 해운대구" ${job.region === "부산광역시 > 해운대구" ? 'selected' : ''}>부산광역시 > 해운대구</option>
         </select>
-        <label class='block mb-2'>
-          <input type='checkbox' name='pinned' value='true' ${ job.pinned ? "checked" : "" } /> 상단 고정
-        </label>
+        <label class='block mb-2'><input type='checkbox' name='pinned' value='true' ${ job.pinned ? "checked" : "" } /> 상단 고정</label>
         <textarea name='intro' placeholder='소개글' maxlength='100' class='border p-1 w-full mb-2'>${job.intro || ''}</textarea>
         <p class='mb-1 text-sm'>✅ 매칭 완료할 파트를 선택하세요:</p>
         ${partOptions}
-
-        <!-- 추가: 매칭완료 입력란 -->
-        <div class='mt-3'>
-          ${isJobTypeRecruit ? `
-            <label class="block mb-2">가입할 닉네임을 입력하세요:</label>
-            <input type="text" name="nickname" placeholder="닉네임" class="border p-1 w-full mb-2" />
-          ` : `
-            <label class="block mb-2">가입한 밴드명을 입력하세요:</label>
-            <input type="text" name="band_name" placeholder="밴드명" class="border p-1 w-full mb-2" />
-          `}
-        </div>
-
         <div class='mt-3'>
           <button type='submit' class='bg-green-600 text-white px-3 py-1 rounded'>저장</button>
         </div>
@@ -85,10 +66,7 @@ export default function openMatchPopup(index) {
         intro: form.get('intro'),
         password: pw,  // 비밀번호 포함
         parts: [...e.target.querySelectorAll('input[name="match"]:checked')].map(i => i.value),
-        pinned: form.get('pinned') === 'true',
-        nickname: form.get('nickname') || '',  // 구인일 경우 닉네임
-        band_name: form.get('band_name') || '', // 구직일 경우 밴드명
-        is_matched: true // 매칭 완료 상태로 설정
+        pinned: form.get('pinned') === 'true'
       };
 
       // 글 수정 요청
