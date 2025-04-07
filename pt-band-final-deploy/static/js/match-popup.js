@@ -41,4 +41,66 @@ export default function openMatchPopup(index) {
         <select required name="region" class="border p-1 w-full mb-2">
           <option value="경기도 > 평택시" ${job.region === "경기도 > 평택시" ? 'selected' : ''}>경기도 > 평택시</option>
           <option value="경기도 > 오산시" ${job.region === "경기도 > 오산시" ? 'selected' : ''}>경기도 > 오산시</option>
-          <option value="경기도 > 화성시" ${job.region === "경기도 > 화성시" ? 'selected' : ''}>경기도 > 화
+          <option value="경기도 > 화성시" ${job.region === "경기도 > 화성시" ? 'selected' : ''}>경기도 > 화성시</option>
+          <option value="경기도 > 안성시" ${job.region === "경기도 > 안성시" ? 'selected' : ''}>경기도 > 안성시</option>
+          <option value="서울특별시 > 강남구" ${job.region === "서울특별시 > 강남구" ? 'selected' : ''}>서울특별시 > 강남구</option>
+          <option value="부산광역시 > 해운대구" ${job.region === "부산광역시 > 해운대구" ? 'selected' : ''}>부산광역시 > 해운대구</option>
+        </select>
+        <label class='block mb-2'>
+          <input type='checkbox' name='pinned' value='true' ${ job.pinned ? "checked" : "" } /> 상단 고정
+        </label>
+        <textarea name='intro' placeholder='소개글' maxlength='100' class='border p-1 w-full mb-2'>${job.intro || ''}</textarea>
+        <p class='mb-1 text-sm'>✅ 매칭 완료할 파트를 선택하세요:</p>
+        ${partOptions}
+
+        <!-- 추가: 매칭완료 입력란 -->
+        <div class='mt-3'>
+          ${isJobTypeRecruit ? `
+            <label class="block mb-2">가입할 닉네임을 입력하세요:</label>
+            <input type="text" name="nickname" placeholder="닉네임" class="border p-1 w-full mb-2" />
+          ` : `
+            <label class="block mb-2">가입한 밴드명을 입력하세요:</label>
+            <input type="text" name="band_name" placeholder="밴드명" class="border p-1 w-full mb-2" />
+          `}
+        </div>
+
+        <div class='mt-3'>
+          <button type='submit' class='bg-green-600 text-white px-3 py-1 rounded'>저장</button>
+        </div>
+      </form>
+    `;
+
+    document.body.appendChild(popup);
+
+    // 수정된 정보 제출
+    document.getElementById('match-form').onsubmit = (e) => {
+      e.preventDefault();
+      const form = new FormData(e.target);
+      const updated = {
+        team: form.get('team'),
+        location: form.get('location'),
+        type: form.get('type'),
+        age: form.get('age'),
+        region: form.get('region'),
+        intro: form.get('intro'),
+        password: pw,  // 비밀번호 포함
+        parts: [...e.target.querySelectorAll('input[name="match"]:checked')].map(i => i.value),
+        pinned: form.get('pinned') === 'true',
+        nickname: form.get('nickname') || '',  // 구인일 경우 닉네임
+        band_name: form.get('band_name') || '' // 구직일 경우 밴드명
+      };
+
+      // 글 수정 요청
+      fetch(`/update/${index}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updated)
+      })
+      .then(res => res.json())
+      .then(resp => {
+        if (resp.success) location.reload();
+        else alert("저장 실패: " + (resp.message || "오류"));
+      });
+    };
+  });
+}
