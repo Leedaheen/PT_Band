@@ -82,8 +82,11 @@ export default function openMatchPopup(index) {
         })
         .then(res => res.json())
         .then(resp => {
-          if (resp.success) location.reload();
-          else alert("저장 실패: " + (resp.message || "오류"));
+          if (resp.success) {
+            App.filterJobs('전체');  // 전체 목록 필터링 업데이트
+          } else {
+            alert("저장 실패: " + (resp.message || "오류"));
+          }
         });
       };
     })
