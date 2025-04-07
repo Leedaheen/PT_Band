@@ -59,7 +59,7 @@ def add_job():
         return jsonify(success=False, message="No data provided")
 
      # 비밀번호 해시화
-    item["password"] = generate_password_hash(item["password"])
+    item["password"] = generate_password_hash(item["password"]) # 해시화된 비밀번호 저장
     
     data = load_data() 
     item["clicks"] = 0
