@@ -1,4 +1,7 @@
 export default function openMatchPopup(index) {
+  const job = jobs[index];  // 해당 job 정보 가져오기
+  const isJobTypeRecruit = job.type === '구인'; // 구인/구직 구분
+
   const pw = prompt("비밀번호를 입력하세요");
   if (!pw) return;  // 비밀번호가 입력되지 않으면 종료
 
@@ -38,52 +41,4 @@ export default function openMatchPopup(index) {
         <select required name="region" class="border p-1 w-full mb-2">
           <option value="경기도 > 평택시" ${job.region === "경기도 > 평택시" ? 'selected' : ''}>경기도 > 평택시</option>
           <option value="경기도 > 오산시" ${job.region === "경기도 > 오산시" ? 'selected' : ''}>경기도 > 오산시</option>
-          <option value="경기도 > 화성시" ${job.region === "경기도 > 화성시" ? 'selected' : ''}>경기도 > 화성시</option>
-          <option value="경기도 > 안성시" ${job.region === "경기도 > 안성시" ? 'selected' : ''}>경기도 > 안성시</option>
-          <option value="서울특별시 > 강남구" ${job.region === "서울특별시 > 강남구" ? 'selected' : ''}>서울특별시 > 강남구</option>
-          <option value="부산광역시 > 해운대구" ${job.region === "부산광역시 > 해운대구" ? 'selected' : ''}>부산광역시 > 해운대구</option>
-        </select>
-        <label class='block mb-2'>
-          <input type='checkbox' name='pinned' value='true' ${ job.pinned ? "checked" : "" } /> 상단 고정
-        </label>
-        <textarea name='intro' placeholder='소개글' maxlength='100' class='border p-1 w-full mb-2'>${job.intro || ''}</textarea>
-        <p class='mb-1 text-sm'>✅ 매칭 완료할 파트를 선택하세요:</p>
-        ${partOptions}
-        <div class='mt-3'>
-          <button type='submit' class='bg-green-600 text-white px-3 py-1 rounded'>저장</button>
-        </div>
-      </form>
-    `;
-
-    document.body.appendChild(popup);
-
-    // 수정된 정보 제출
-    document.getElementById('match-form').onsubmit = (e) => {
-      e.preventDefault();
-      const form = new FormData(e.target);
-      const updated = {
-        team: form.get('team'),
-        location: form.get('location'),
-        type: form.get('type'),
-        age: form.get('age'),
-        region: form.get('region'),
-        intro: form.get('intro'),
-        password: pw,  // 비밀번호 포함
-        parts: [...e.target.querySelectorAll('input[name="match"]:checked')].map(i => i.value),
-        pinned: form.get('pinned') === 'true'
-      };
-
-      // 글 수정 요청
-      fetch(`/update/${index}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updated)
-      })
-      .then(res => res.json())
-      .then(resp => {
-        if (resp.success) location.reload();
-        else alert("저장 실패: " + (resp.message || "오류"));
-      });
-    };
-  });
-}
+          <option value="경기도 > 화성시" ${job.region === "경기도 > 화성시" ? 'selected' : ''}>경기도 > 화
