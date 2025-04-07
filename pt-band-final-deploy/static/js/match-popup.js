@@ -1,6 +1,8 @@
 export default function openMatchPopup(index) {
   const pw = prompt("비밀번호를 입력하세요");
-  if (!pw) return;
+  if (!pw) return;  // 비밀번호가 입력되지 않으면 종료
+
+  // 비밀번호 확인을 위한 요청
   fetch(`/verify-password/${index}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -9,10 +11,17 @@ export default function openMatchPopup(index) {
   .then(res => res.json())
   .then(data => {
     if (!data.success) return alert("비밀번호가 일치하지 않습니다.");
-    const job = data.job;
-    const parts = job.part || [];
-    const partOptions = parts.map(part => `<label><input type='checkbox' name='match' value='${part}' ${job.matched_parts[part] ? 'checked' : ''}> ${part}</label>`).join('<br>');
 
+    const job = data.job;  // 비밀번호가 맞으면 job 정보 받아옴
+    const parts = job.part || [];  // 구직 파트 정보
+    const partOptions = parts.map(part => `
+      <label>
+        <input type='checkbox' name='match' value='${part}' ${job.matched_parts[part] ? 'checked' : ''}>
+        ${part}
+      </label>
+    `).join('<br>');  // 파트 옵션 목록 생성
+
+    // 팝업 생성
     const popup = document.createElement('div');
     popup.className = 'fixed top-1/2 left-1/2 bg-white p-4 rounded shadow z-50 max-w-sm w-full';
     popup.style.transform = 'translate(-50%, -50%)';
@@ -34,7 +43,9 @@ export default function openMatchPopup(index) {
           <option value="서울특별시 > 강남구" ${job.region === "서울특별시 > 강남구" ? 'selected' : ''}>서울특별시 > 강남구</option>
           <option value="부산광역시 > 해운대구" ${job.region === "부산광역시 > 해운대구" ? 'selected' : ''}>부산광역시 > 해운대구</option>
         </select>
-        <label class='block mb-2'><input type='checkbox' name='pinned' value='true' ${ job.pinned ? "checked" : "" } /> 상단 고정</label>
+        <label class='block mb-2'>
+          <input type='checkbox' name='pinned' value='true' ${ job.pinned ? "checked" : "" } /> 상단 고정
+        </label>
         <textarea name='intro' placeholder='소개글' maxlength='100' class='border p-1 w-full mb-2'>${job.intro || ''}</textarea>
         <p class='mb-1 text-sm'>✅ 매칭 완료할 파트를 선택하세요:</p>
         ${partOptions}
@@ -46,6 +57,7 @@ export default function openMatchPopup(index) {
 
     document.body.appendChild(popup);
 
+    // 수정된 정보 제출
     document.getElementById('match-form').onsubmit = (e) => {
       e.preventDefault();
       const form = new FormData(e.target);
@@ -56,10 +68,12 @@ export default function openMatchPopup(index) {
         age: form.get('age'),
         region: form.get('region'),
         intro: form.get('intro'),
-        password: pw,
+        password: pw,  // 비밀번호 포함
         parts: [...e.target.querySelectorAll('input[name="match"]:checked')].map(i => i.value),
         pinned: form.get('pinned') === 'true'
       };
+
+      // 글 수정 요청
       fetch(`/update/${index}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
