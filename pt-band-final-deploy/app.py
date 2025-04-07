@@ -57,18 +57,18 @@ def add_job():
     item = request.get_json()
     if not item:
         return jsonify(success=False, message="No data provided")
-    data = load_data()
+
+     # 비밀번호 해시화
+    item["password"] = generate_password_hash(item["password"])
     
-    # 비밀번호 암호화 (werkzeug.security 사용)
-    hashed_pw = generate_password_hash(item["password"])
-    
+    data = load_data() 
     item["clicks"] = 0
     item["matched_parts"] = {}
-    item["password"] = hashed_pw  # 해시된 비밀번호 저장
     item["created_at"] = int(time.time())
     item["pinned"] = False
     data.append(item)
     save_data(data)
+   
     return jsonify(success=True)
 
 @app.route("/click/<int:index>", methods=["POST"])
