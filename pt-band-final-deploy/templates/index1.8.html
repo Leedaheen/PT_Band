@@ -26,6 +26,7 @@
     <button onclick="App.filterJobs('전체')" class="text-sm bg-gray-200 hover:bg-gray-300 px-2 py-1 rounded">전체</button>
     <button onclick="App.filterJobs('구인')" class="text-sm bg-gray-200 hover:bg-gray-300 px-2 py-1 rounded">구인</button>
     <button onclick="App.filterJobs('구직')" class="text-sm bg-gray-200 hover:bg-gray-300 px-2 py-1 rounded">구직</button>
+    <button onclick="App.filterJobs('매칭완료')" class="text-sm bg-gray-200 hover:bg-gray-300 px-2 py-1 rounded">매칭완료</button> <!-- 추가된 필터 -->
   </div>
   <select id="regionFilter" class="border p-1 text-sm">
     <option value="전체">전체</option>
@@ -34,6 +35,7 @@
     {% endfor %}
   </select>
 </div>
+
 
 <!-- 파트별 필터 -->
 <div class="flex space-x-2 mb-6">
@@ -50,7 +52,11 @@
 } %}
 
 {% for job in jobs %}
-  <div class="bg-white p-4 mb-6 rounded shadow relative job-item {% if job.pinned %}border-2 border-yellow-400{% endif %}" data-type="{{ job.type }}" data-parts="{{ job.part | join(',') }}">
+    <div class="bg-white p-4 mb-6 rounded shadow relative job-item {% if job.pinned %}border-2 border-yellow-400{% endif %}" 
+       data-type="{{ job.type }}" 
+       data-parts="{{ job.part | join(',') }}"
+       data-matched="{{ job.is_matched ? 'true' : 'false' }}"> <!-- data-matched 추가 -->
+      
     {% if job.pinned %}<span class="absolute top-2 left-2 text-yellow-500 font-bold text-xs">📌 상단고정</span>{% endif %}
     <div class="absolute top-2 right-3 flex gap-2">
       <button class="text-xs text-gray-600 hover:underline" onclick="App.openMatchPopup({{ loop.index0 }})">매칭상태 변경</button>
@@ -103,45 +109,51 @@
 
 <script>
   const App = {
-    toggleExpand: function(el) {
-      const container = el.closest('.job-item');
-      const content = container.querySelector('.expand-content');
-      content.classList.toggle('hidden');
-      el.innerHTML = content.classList.contains('hidden') ? '&lt;더 보기&gt;' : '&lt;접기&gt;';
-    },
+  toggleExpand: function(el) {
+    const container = el.closest('.job-item');
+    const content = container.querySelector('.expand-content');
+    content.classList.toggle('hidden');
+    el.innerHTML = content.classList.contains('hidden') ? '&lt;더 보기&gt;' : '&lt;접기&gt;';
+  },
 
-    openForm: function() {
-      import('/static/js/form-popup.js').then(module => module.default());
-    },
+  openForm: function() {
+    import('/static/js/form-popup.js').then(module => module.default());
+  },
 
-    openMatchPopup: function(index) {
-      import('/static/js/match-popup.js').then(module => module.default(index));
-    },
+  openMatchPopup: function(index) {
+    import('/static/js/match-popup.js').then(module => module.default(index));
+  },
 
-    // 구인/구직 필터링
-    filterJobs: function(type) {
-      const jobItems = document.querySelectorAll('.job-item');
-      jobItems.forEach(item => {
-        const itemType = item.getAttribute('data-type');
+  // 구인/구직/매칭완료 필터링
+  filterJobs: function(type) {
+    const jobItems = document.querySelectorAll('.job-item');
+    jobItems.forEach(item => {
+      const itemType = item.getAttribute('data-type');
+      const itemIsMatched = item.getAttribute('data-matched') === 'true'; // 매칭 완료 여부 확인
+      if (type === '매칭완료') {
+        item.style.display = itemIsMatched ? '' : 'none'; // 매칭 완료된 항목만 표시
+      } else {
         item.style.display = (type === '전체' || itemType === type) ? '' : 'none';
-      });
-    },
+      }
+    });
+  },
 
-    // 파트별 필터링
-    filterParts: function() {
-      const selectedParts = [...document.querySelectorAll('.part-filter:checked')].map(checkbox => checkbox.value);
-      const jobItems = document.querySelectorAll('.job-item');
+  // 파트별 필터링
+  filterParts: function() {
+    const selectedParts = [...document.querySelectorAll('.part-filter:checked')].map(checkbox => checkbox.value);
+    const jobItems = document.querySelectorAll('.job-item');
 
-      jobItems.forEach(item => {
-        // data-parts 속성에서 파트 목록 가져오기
-        const itemParts = item.getAttribute('data-parts').split(',');
+    jobItems.forEach(item => {
+      // data-parts 속성에서 파트 목록 가져오기
+      const itemParts = item.getAttribute('data-parts').split(',');
 
-        // 선택된 파트가 하나라도 포함되면 그 항목을 표시
-        const showItem = selectedParts.length === 0 || itemParts.some(part => selectedParts.includes(part));
-        item.style.display = showItem ? '' : 'none';
-      });
-    }
-  };
+      // 선택된 파트가 하나라도 포함되면 그 항목을 표시
+      const showItem = selectedParts.length === 0 || itemParts.some(part => selectedParts.includes(part));
+      item.style.display = showItem ? '' : 'none';
+    });
+  }
+};
+
 </script>
 </body>
 </html>
