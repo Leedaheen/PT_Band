@@ -36,7 +36,6 @@
   </select>
 </div>
 
-
 <!-- 파트별 필터 -->
 <div class="flex space-x-2 mb-6">
   <label class="text-sm">파트 :</label>
@@ -52,12 +51,10 @@
 } %}
 
 {% for job in jobs %}
-    <div class="bg-white p-4 mb-6 rounded shadow relative job-item {% if job.pinned %}border-2 border-yellow-400{% endif %}" 
+  <div class="bg-white p-4 mb-6 rounded shadow relative job-item {% if job.pinned %}border-2 border-yellow-400{% endif %}" 
        data-type="{{ job.type }}" 
        data-parts="{{ job.part | join(',') }}"
-
-       data-matched="{% if job.is_matched %}true{% else %}false{% endif %}"> <!-- 추가된 부분 -->
-      
+       data-matched="{{ job.is_matched ? 'true' : 'false' }}"> <!-- 매칭 상태 추가 -->
     {% if job.pinned %}<span class="absolute top-2 left-2 text-yellow-500 font-bold text-xs">📌 상단고정</span>{% endif %}
     <div class="absolute top-2 right-3 flex gap-2">
       <button class="text-xs text-gray-600 hover:underline" onclick="App.openMatchPopup({{ loop.index0 }})">매칭상태 변경</button>
@@ -126,9 +123,7 @@
       .catch(err => {
         console.error("match-popup.js 로딩 오류: ", err);  // 로드 오류 확인
       });
-  }
-};
-
+  },
 
   // 구인/구직/매칭완료 필터링
   filterJobs: function(type) {
@@ -143,6 +138,8 @@
       }
     });
   },
+
+
 
   // 파트별 필터링
   filterParts: function() {
