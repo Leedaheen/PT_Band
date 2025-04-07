@@ -15,9 +15,11 @@ export default function openMatchPopup(index) {
       
       const job = data.job;
       const parts = job.part || [];
+      
+      // 기본 값은 체크 해제
       const partOptions = parts.map(part => `
         <label>
-          <input type='checkbox' name='match' value='${part}' ${job.matched_parts[part] ? 'checked' : ''}>
+          <input type='checkbox' name='match' value='${part}' class='match-checkbox'>
           ${part}
         </label>
       `).join('<br>');
@@ -82,11 +84,8 @@ export default function openMatchPopup(index) {
         })
         .then(res => res.json())
         .then(resp => {
-          if (resp.success) {
-            App.filterJobs('전체');  // 전체 목록 필터링 업데이트
-          } else {
-            alert("저장 실패: " + (resp.message || "오류"));
-          }
+          if (resp.success) location.reload();
+          else alert("저장 실패: " + (resp.message || "오류"));
         });
       };
     })
