@@ -53,22 +53,23 @@ def index():
     return render_template("index.html", jobs=jobs, locations=locations, types=types, parts=parts)
 
 @app.route("/add", methods=["POST"])
+# 새로 등록되는 비밀번호는 PBKDF2 방식으로 해시화
 def add_job():
     item = request.get_json()
     if not item:
         return jsonify(success=False, message="No data provided")
-
-     # 비밀번호 해시화
-    item["password"] = generate_password_hash(item["password"]) # 해시화된 비밀번호 저장
     
-    data = load_data() 
+    # 평문 비밀번호를 PBKDF2 방식으로 해시화
+    item["password"] = generate_password_hash(item["password"])
+    
+    # 나머지 작업
+    data = load_data()
     item["clicks"] = 0
     item["matched_parts"] = {}
     item["created_at"] = int(time.time())
     item["pinned"] = False
     data.append(item)
     save_data(data)
-   
     return jsonify(success=True)
 
 @app.route("/click/<int:index>", methods=["POST"])
@@ -107,6 +108,20 @@ def verify_password(index):
         return jsonify(success=True, job=data[index])
 
     return jsonify(success=False, message="비밀번호가 일치하지 않습니다.")
+
+
+# 기존 데이터를 업데이트하여 새로운 해시값으로 저장하는 코드
+def update_password_hash():
+    data = load_data()
+    
+    for job in data:
+        if len(job["password"]) == 64:  # MD5 해시 체크 (예: 길이가 64인 값)
+            # MD5 해시를 PBKDF2 방식으로 업데이트
+            job["password"] = generate_password_hash(job["password"])
+    
+    save_data(data)
+    print("비밀번호 해시가 새 방식으로 업데이트되었습니다.")
+
 
 @app.route("/update/<int:index>", methods=["POST"])
 def update(index):
