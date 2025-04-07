@@ -88,6 +88,7 @@ def click(index):
         return jsonify(success=True)
     return jsonify(success=False)
 
+
 @app.route("/verify-password/<int:index>", methods=["POST"])
 def verify_password(index):
     req = request.get_json()
@@ -101,9 +102,12 @@ def verify_password(index):
     # 관리자 비밀번호 확인 (관리자 비밀번호는 평문으로 비교)
     is_admin = input_pw == "admin1234"
     if is_admin:
+        # 관리자라면 상단 고정 상태 변경
+        data[index]["pinned"] = not data[index].get("pinned", False)  # 상단 고정 상태 토글
+        save_data(data)  # 데이터 저장
         return jsonify(success=True, job=data[index])
 
-    # 저장된 해시화된 비밀번호와 입력된 비밀번호를 비교
+    # 저장된 비밀번호와 입력된 비밀번호를 해시로 비교
     if check_password_hash(data[index]["password"], input_pw):
         return jsonify(success=True, job=data[index])
 
