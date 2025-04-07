@@ -2,11 +2,15 @@ export default function() {
   console.log("팝업창 열림");  // 디버깅용 로그
 
   const popup = document.createElement('div');
-  popup.className = 'fixed top-1/2 left-1/2 bg-white p-4 rounded shadow z-50 max-w-sm w-full';
+  
+  // 팝업에 상하 여백을 추가하고, 모바일 화면에서 잘리거나 화면을 벗어나지 않도록 설정
+  popup.className = 'fixed top-1/2 left-1/2 bg-white p-4 rounded shadow z-50 max-w-sm w-full max-h-[90%] overflow-auto';
   popup.style.transform = 'translate(-50%, -50%)';
 
   popup.innerHTML = `
-    <div class='text-right'><button onclick='this.parentElement.parentElement.remove()' class='text-sm text-red-500'>✖ 닫기</button></div>
+    <div class='text-right'>
+      <button onclick='this.parentElement.parentElement.remove()' class='text-sm text-red-500'>✖ 닫기</button>
+    </div>
     <form id='new-post-form'>
       <p class='mb-2 text-sm font-semibold'>글 작성하기</p>
       <div class='mb-2'>
@@ -101,17 +105,7 @@ export default function() {
     } else {
       container.innerHTML = `
         <input required name='nickname' placeholder='오픈톡 닉네임 (필수)' class='border p-1 w-full mb-2' />
-        <div class='mb-2'><label class='block mb-1'>구직 파트:</label>
-          <div class='grid grid-cols-2 gap-4'>
-            <div><input type='checkbox' name='part' value='보컬(남)' class='mr-1' />보컬(남)</div>
-            <div><input type='checkbox' name='part' value='보컬(여)' class='mr-1' />보컬(여)</div>
-            <div><input type='checkbox' name='part' value='드럼' class='mr-1' />드럼</div>
-            <div><input type='checkbox' name='part' value='베이스' class='mr-1' />베이스</div>
-            <div><input type='checkbox' name='part' value='기타' class='mr-1' />기타</div>
-            <div><input type='checkbox' name='part' value='키보드' class='mr-1' />키보드</div>
-            <div><input type='checkbox' name='part' value='그 외' class='mr-1' />그 외</div>
-          </div>
-        </div>
+        <div class='mb-2'><label class='block mb-1'>구직 파트:</label>${checklistHTML}</div>
         <input required name='age' placeholder='나이' class='border p-1 w-full mb-2' />
         ${regionSelectHTML}
         <input required name='contact' placeholder='연락처 (필수)' class='border p-1 w-full mb-2' />
