@@ -32,9 +32,10 @@ export default function openMatchPopup(index) {
       <form id='match-form'>
         <p class='mb-2 text-sm font-semibold'>글 수정 및 매칭완료 설정</p>
         <input type='text' name='team' value='${job.team}' placeholder='팀명' class='border p-1 w-full mb-2' />
+        <input type='text' name='nickname' value='${job.nickname}' placeholder='오픈톡 닉네임' class='border p-1 w-full mb-2' />
+        <input type='text' name='age' value='${job.age}' placeholder='나이' class='border p-1 w-full mb-2' />
         <input type='text' name='location' value='${job.location}' placeholder='위치' class='border p-1 w-full mb-2' />
         <input type='text' name='type' value='${job.type}' placeholder='구분' class='border p-1 w-full mb-2' />
-        <input type='text' name='age' value='${job.age}' placeholder='연령대' class='border p-1 w-full mb-2' />
         <select required name="region" class="border p-1 w-full mb-2">
           <option value="경기도 > 평택시" ${job.region === "경기도 > 평택시" ? 'selected' : ''}>경기도 > 평택시</option>
           <option value="경기도 > 오산시" ${job.region === "경기도 > 오산시" ? 'selected' : ''}>경기도 > 오산시</option>
@@ -63,9 +64,10 @@ export default function openMatchPopup(index) {
       const form = new FormData(e.target);
       const updated = {
         team: form.get('team'),
+        nickname: form.get('nickname'),
+        age: form.get('age'),
         location: form.get('location'),
         type: form.get('type'),
-        age: form.get('age'),
         region: form.get('region'),
         intro: form.get('intro'),
         password: pw,  // 비밀번호 포함
