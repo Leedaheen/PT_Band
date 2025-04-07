@@ -66,7 +66,7 @@
 
     <p class="text-sm text-gray-600 mb-2">
       {% if job.type == '구인' %}
-        <strong>{% for part in job.part %}{{ emoji_map.get(part, '') }}{{ part }}{% if not loop.last %} / {% endif %}{% endfor %}</strong><br>  멤버가 필요해요!
+        <strong>{% for part in job.part %}{{ emoji_map.get(part, '') }}{{ part }}{% if not loop.last %} / {% endif %}{% endfor %}</strong> 멤버가 필요해요!
       {% else %}
         {{ job.intro or '' }}
       {% endif %}
@@ -78,6 +78,7 @@
       <!-- '연령대' 항목을 '나이'로 변경 -->
       <p class="text-sm text-gray-600"><strong>나이:</strong> {{ job.age or '-' }}</p>
       {% if job.fee %}<p class="text-sm text-gray-600"><strong>월 회비:</strong> {{ job.fee }}</p>{% endif %}
+      <br> {{ job.into or '-' }}
     </div>
 
     <div class="flex justify-between items-end mt-2">
