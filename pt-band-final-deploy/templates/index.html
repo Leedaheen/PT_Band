@@ -36,6 +36,16 @@
     </select>
   </div>
 
+  <!-- 파트별 필터 -->
+  <div class="flex space-x-2 mb-6">
+    <label class="text-sm">파트 :</label>
+    {% for part in parts %}
+      <label class="mr-2">
+        <input type="checkbox" class="part-filter" value="{{ part }}" onclick="App.filterParts()"> {{ part }}
+      </label>
+    {% endfor %}
+  </div>
+
   {% set emoji_map = {
     '보컬(남)': '🎤', '보컬(여)': '🎤', '드럼': '🥁', '베이스': '🎸', '기타': '🎸', '키보드': '🎹', '그 외': '🔸'
   } %}
@@ -47,7 +57,7 @@
     <!-- 공개할 정보 출력 -->
     <h2 class="text-lg font-semibold mb-1">
       {% if job.type == '구인' %}
-        {{ job.team }} - {{ job.part | join(', ') }} (구인 완료)
+        {{ job.team }} - {{ job.part | join(', ') }} / 구인 완료
       {% else %}
         {% if job.matched_parts %}
           {{ job.part | join(', ') }} -> {{ job.team }} (매칭 완료)
@@ -64,7 +74,7 @@
         {% elif job.created_at %}
           <p class="text-xs text-gray-400 mb-1">🕒 {{ job.created_at | datetimeformat('%Y-%m-%d %H:%M') }} 등록</p>
         {% endif %}
-        <a href="tel:{{ job.contact }}" onclick="fetch('/click/{{ loop.index0 }}', { method: 'POST' })" class="text-xs bg-blue-500 hover:bg-blue-600 text-white px-2 py-[6px] rounded block w-fit mx-auto flex justify-center items-center">
+        <a href="tel:{{ job.contact }}" onclick="fetch('/click/{{ loop.index0 }}', { method: 'POST' })" class="text-xs bg-blue-500 hover:bg-blue-600 text-white px-1.5 py-[9px] rounded block w-fit mx-auto flex justify-center items-center">
           연락처 확인
         </a>
         <p class="text-xs text-gray-400 mt-1">👁 {{ job.clicks or 0 }}명이 연락처를 확인했어요</p>
