@@ -87,7 +87,8 @@ export default function openMatchPopup(index) {
         parts: [...e.target.querySelectorAll('input[name="match"]:checked')].map(i => i.value),
         pinned: form.get('pinned') === 'true',
         nickname: form.get('nickname') || '',  // 구인일 경우 닉네임
-        band_name: form.get('band_name') || '' // 구직일 경우 밴드명
+        band_name: form.get('band_name') || '', // 구직일 경우 밴드명
+        is_matched: true // 매칭 완료 상태로 설정
       };
 
       // 글 수정 요청
