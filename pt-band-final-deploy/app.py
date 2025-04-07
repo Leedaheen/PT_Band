@@ -92,19 +92,18 @@ def verify_password(index):
     req = request.get_json()
     data = load_data()
 
-    # 인덱스가 데이터에 존재하는지 확인
     if index >= len(data):
         return jsonify(success=False, message="잘못된 데이터입니다.")
 
     input_pw = req["password"]  # 사용자가 입력한 비밀번호
 
-    # 관리자 비밀번호 확인
-    is_admin = input_pw == "admin1234"  # 관리자 비밀번호와 비교
+    # 관리자 비밀번호 확인 (관리자 비밀번호는 평문으로 비교)
+    is_admin = input_pw == "admin1234"
     if is_admin:
         return jsonify(success=True, job=data[index])
 
-    # 사용자 비밀번호 비교 (해시화된 비밀번호와 비교)
-    if check_password_hash(data[index]["password"], input_pw):  # 저장된 해시된 비밀번호와 비교
+    # 저장된 해시화된 비밀번호와 입력된 비밀번호를 비교
+    if check_password_hash(data[index]["password"], input_pw):
         return jsonify(success=True, job=data[index])
 
     return jsonify(success=False, message="비밀번호가 일치하지 않습니다.")
