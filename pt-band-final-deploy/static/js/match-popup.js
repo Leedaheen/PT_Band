@@ -84,8 +84,17 @@ export default function openMatchPopup(index) {
         })
         .then(res => res.json())
         .then(resp => {
-          if (resp.success) location.reload();
-          else alert("저장 실패: " + (resp.message || "오류"));
+          if (resp.success) {
+            // 매칭 완료 처리
+            const jobItem = document.querySelector(`.job-item[data-type='${job.type}']`);
+            jobItem.setAttribute('data-matched', 'true');  // 매칭 완료 상태 업데이트
+
+            // 매칭완료 리스트 필터링 처리
+            App.filterJobs('매칭완료');  // 필터 적용
+            location.reload();
+          } else {
+            alert("저장 실패: " + (resp.message || "오류"));
+          }
         });
       };
     })
