@@ -54,7 +54,8 @@
   <div class="bg-white p-4 mb-6 rounded shadow relative job-item {% if job.pinned %}border-2 border-yellow-400{% endif %}" 
        data-type="{{ job.type }}" 
        data-parts="{{ job.part | join(',') }}"
-       data-matched="{% if job.is_matched %}true{% else %}false{% endif %}"> <!--매칭 상태 추가 -->
+       data-matched="{% if job.is_matched %}true{% else %}false{% endif %}" 
+       data-pinned="{{ job.pinned ? 'true' : 'false' }}">  <!-- data-pinned 추가 -->
     
     
     {% if job.pinned %}<span class="absolute top-1 left-1 text-yellow-500 font-bold text-s">📌</span>{% endif %}
