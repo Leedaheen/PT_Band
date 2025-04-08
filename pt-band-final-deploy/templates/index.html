@@ -54,8 +54,9 @@
   <div class="bg-white p-4 mb-6 rounded shadow relative job-item {% if job.pinned %}border-2 border-yellow-400{% endif %}" 
        data-type="{{ job.type }}" 
        data-parts="{{ job.part | join(',') }}"
-       data-matched="{% if job.is_matched %}true{% else %}false{% endif %}" 
-       data-pinned="{% if job.pinned %}true{% else %}false{% endif %}">
+       data-matched="{% if job.is_matched %}true{% else %}false{% endif %}"
+       data-pinned="{% if job.pinned %}true{% else %}false{% endif %}"
+
     
     {% if job.pinned %}
     
