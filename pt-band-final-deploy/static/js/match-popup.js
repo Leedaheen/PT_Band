@@ -1,4 +1,5 @@
 export default function openMatchPopup(index) {
+  // 비밀번호 입력
   const pw = prompt("비밀번호를 입력하세요");
   if (!pw) return;  // 비밀번호가 없으면 종료
 
@@ -70,7 +71,7 @@ export default function openMatchPopup(index) {
           intro: form.get('intro'),
           password: pw,  // 비밀번호 포함
           parts: [...e.target.querySelectorAll('input[name="match"]:checked')].map(i => i.value),
-          pinned: form.get('pinned') === 'true'
+          pinned: form.get('pinned') === 'true' // 상단고정 상태 처리
         };
 
         // 글 수정 요청
