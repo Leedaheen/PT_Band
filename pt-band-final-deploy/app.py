@@ -1,22 +1,35 @@
 from flask import Flask, render_template, request, jsonify, session
 import json, os, time, datetime
 from werkzeug.security import generate_password_hash, check_password_hash
+import firebase_admin
+from firebase_admin import credentials, db
+
+# Firebase Admin SDK 초기화
+cred = credentials.Certificate('C:\Users\windows11pro\OneDrive\바탕 화면\ETC\Programing\firebase key')  # 다운로드한 서비스 계정 키 파일 경로
+firebase_admin.initialize_app(cred, {
+    'databaseURL': 'https://ptband-a27fb-default-rtdb.asia-southeast1.firebasedatabase.app/'  # Firebase Realtime Database URL
+})
 
 app = Flask(__name__)
 app.secret_key = 'dl9ek1gmls032601086541230'
 DATA_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data.json")
 
 # 데이터 로드 함수
+
+
+# Firebase에서 데이터 읽기
 def load_data():
-    if not os.path.exists(DATA_FILE):
-        return []
-    with open(DATA_FILE, "r", encoding="utf-8") as f:
-        return json.load(f)
+    ref = db.reference('jobs')  # 'jobs'라는 경로에서 데이터를 읽어옵니다.
+    jobs = ref.get()  # 데이터를 가져옴
+    return jobs if jobs else []  # 데이터가 없으면 빈 리스트 반환
+
 
 # 데이터 저장 함수
+# Firebase에 데이터 저장
 def save_data(data):
-    with open(DATA_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+    ref = db.reference('jobs')  # 'jobs'라는 경로에 데이터를 저장
+    ref.set(data)  # 전체 데이터를 덮어쓰기를 합니다. (수정 시에는 더 정교한 방법 사용 가능)
+
 
 # 타임스탬프 포맷 필터 (ISO 형식 및 정수형 처리)
 @app.template_filter('datetimeformat')
@@ -52,8 +65,8 @@ def index():
     parts = sorted(set(part for job in jobs for part in job.get("part", [])))
     return render_template("index.html", jobs=jobs, locations=locations, types=types, parts=parts)
 
+
 @app.route("/add", methods=["POST"])
-# 새로 등록되는 비밀번호는 PBKDF2 방식으로 해시화
 def add_job():
     item = request.get_json()
     if not item:
@@ -63,14 +76,17 @@ def add_job():
     item["password"] = generate_password_hash(item["password"])
     
     # 나머지 작업
-    data = load_data()
+    data = load_data()  # 기존 데이터 읽기
     item["clicks"] = 0
     item["matched_parts"] = {}
     item["created_at"] = int(time.time())
     item["pinned"] = False
-    data.append(item)
+    data.append(item)  # 새로운 항목 추가
+
+    # Firebase에 저장
     save_data(data)
     return jsonify(success=True)
+
 
 @app.route("/click/<int:index>", methods=["POST"])
 def click(index):
@@ -79,6 +95,7 @@ def click(index):
     clicked = session['clicked']
     if str(index) in clicked:
         return jsonify(success=True)
+    
     data = load_data()
     if 0 <= index < len(data):
         data[index]["clicks"] = data[index].get("clicks", 0) + 1
@@ -87,6 +104,7 @@ def click(index):
         session['clicked'] = clicked
         return jsonify(success=True)
     return jsonify(success=False)
+
 
 
 @app.route("/verify-password/<int:index>", methods=["POST"])
@@ -135,19 +153,15 @@ def update(index):
     if index >= len(data):
         return jsonify(success=False, message="잘못된 데이터입니다.")
 
-    # 입력된 비밀번호
     input_pw = req["password"]
     
-    # 관리자 비밀번호 확인 (관리자 비밀번호는 평문으로 비교)
     is_admin = input_pw == "admin1234"
     if is_admin:
         return jsonify(success=True, message="관리자 권한으로 수정 가능합니다.")
     
-    # 사용자가 입력한 비밀번호를 해시화된 비밀번호와 비교
     if not check_password_hash(data[index]["password"], input_pw):
-        return jsonify(success=False, message="비밀번호가 일치하지 않습니다.")  # 비밀번호 불일치 시 종료
-    
-    # 비밀번호가 맞으면 수정 진행
+        return jsonify(success=False, message="비밀번호가 일치하지 않습니다.")
+
     data[index]["team"] = req["team"]
     data[index]["location"] = req["location"]
     data[index]["type"] = req["type"]
@@ -162,8 +176,10 @@ def update(index):
     if is_admin:
         data[index]["pinned"] = True if req.get("pinned") == "true" else False
 
+    # Firebase에 저장
     save_data(data)
     return jsonify(success=True, message="수정이 완료되었습니다.")
+
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
