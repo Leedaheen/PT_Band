@@ -5,8 +5,8 @@ import firebase_admin
 from firebase_admin import credentials, db
 
 # Firebase Admin SDK 초기화
-cred = credentials.Certificate('C:\\Users\\windows11pro\\OneDrive\\바탕 화면\\ETC\\Programing\\firebase key.json')  # 백슬래시 두 번 사용
-  # 다운로드한 서비스 계정 키 파일 경로
+cred = credentials.Certificate(os.getenv('GOOGLE_APPLICATION_CREDENTIALS'))
+  # 다운로드한 서비스 계정 키 파일 경로(Enveronment 환경변수 설정)
 
 firebase_admin.initialize_app(cred, {
     'databaseURL': 'https://ptband-a27fb-default-rtdb.asia-southeast1.firebasedatabase.app/'  # Firebase Realtime Database URL
