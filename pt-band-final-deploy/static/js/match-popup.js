@@ -1,5 +1,4 @@
 export default function openMatchPopup(index) {
-  // 비밀번호 입력
   const pw = prompt("비밀번호를 입력하세요");
   if (!pw) return;  // 비밀번호가 없으면 종료
 
@@ -15,11 +14,9 @@ export default function openMatchPopup(index) {
       
       const job = data.job;
       const parts = job.part || [];
-      
-      // 기본 값은 체크 해제, 기존에 상단 고정이 되어있으면 체크된 상태로 표시
       const partOptions = parts.map(part => `
         <label>
-          <input type='checkbox' name='match' value='${part}' class='match-checkbox'>
+          <input type='checkbox' name='match' value='${part}' ${job.matched_parts[part] ? 'checked' : ''}>
           ${part}
         </label>
       `).join('<br>');
@@ -47,7 +44,7 @@ export default function openMatchPopup(index) {
             <option value="부산광역시 > 해운대구" ${job.region === "부산광역시 > 해운대구" ? 'selected' : ''}>부산광역시 > 해운대구</option>
           </select>
           <label class='block mb-2'>
-            <input type='checkbox' name='pinned' value='true' ${job.pinned ? "checked" : ""} /> 상단 고정 <!-- 기존에 상단 고정이 되어있으면 체크 상태 -->
+            <input type='checkbox' name='pinned' value='true' ${job.pinned ? "checked" : ""} /> 상단 고정
           </label>
           <textarea name='intro' placeholder='소개글' maxlength='100' class='border p-1 w-full mb-2'>${job.intro || ''}</textarea>
           <p class='mb-1 text-sm'>✅ 매칭 완료할 파트를 선택하세요:</p>
@@ -73,7 +70,7 @@ export default function openMatchPopup(index) {
           intro: form.get('intro'),
           password: pw,  // 비밀번호 포함
           parts: [...e.target.querySelectorAll('input[name="match"]:checked')].map(i => i.value),
-          pinned: form.get('pinned') === 'true'  // 체크된 경우만 상단 고정
+          pinned: form.get('pinned') === 'true'
         };
 
         // 글 수정 요청
@@ -84,17 +81,8 @@ export default function openMatchPopup(index) {
         })
         .then(res => res.json())
         .then(resp => {
-          if (resp.success) {
-            // 매칭 완료 처리
-            const jobItem = document.querySelector(`.job-item[data-type='${job.type}']`);
-            jobItem.setAttribute('data-matched', 'true');  // 매칭 완료 상태 업데이트
-
-            // 매칭완료 리스트 필터링 처리
-            App.filterJobs('매칭완료');  // 필터 적용
-            location.reload();
-          } else {
-            alert("저장 실패: " + (resp.message || "오류"));
-          }
+          if (resp.success) location.reload();
+          else alert("저장 실패: " + (resp.message || "오류"));
         });
       };
     })
