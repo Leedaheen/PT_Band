@@ -1,4 +1,4 @@
-name: Deploy to Server with Firebase
+name: Deploy to Firebase
 
 on:
   push:
@@ -26,8 +26,8 @@ jobs:
         source venv/bin/activate
         pip install -r requirements.txt  # 필요한 의존성 설치
 
-    # 4. Firebase 앱 초기화
+    # 4. Firebase 앱 초기화 및 배포
     - name: Deploy with Firebase
       run: |
         source venv/bin/activate
-        python deploy_to_firebase.py  # 배포를 위한 스크립트 실행 (필요에 따라 수정)
+        python deploy_to_firebase.py  # Firebase 배포 스크립트 실행
