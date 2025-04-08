@@ -19,7 +19,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install -r requirements.txt  # requirements.txt 파일을 설치
+          pip install -r requirements.txt 
 
       - name: Set up Firebase credentials
         run: echo "${{ secrets.FIREBASE_SERVICE_ACCOUNT }}" > firebase_key.json
