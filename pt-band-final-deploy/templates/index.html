@@ -55,7 +55,7 @@
        data-type="{{ job.type }}" 
        data-parts="{{ job.part | join(',') }}"
        data-matched="{% if job.is_matched %}true{% else %}false{% endif %}" 
-       data-pinned="{{ job.pinned ? 'true' : 'false' }}"> </div>
+       data-pinned="{% if job.pinned %}true{% else %}false{% endif %}"> </div>
     
     
     {% if job.pinned %}<span class="absolute top-1 left-1 text-yellow-500 font-bold text-s">📌</span>{% endif %}
