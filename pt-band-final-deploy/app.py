@@ -122,7 +122,7 @@ def verify_password(index):
     if is_admin:
         # 관리자라면 상단 고정 상태 변경
         data[index]["pinned"] = not data[index].get("pinned", False)  # 상단 고정 상태 토글
-        save_data(data)  # 데이터 저장
+        save_data(data)  # Firebase에 데이터 저장
         return jsonify(success=True, job=data[index])
 
     # 저장된 비밀번호와 입력된 비밀번호를 해시로 비교
@@ -130,6 +130,7 @@ def verify_password(index):
         return jsonify(success=True, job=data[index])
 
     return jsonify(success=False, message="비밀번호가 일치하지 않습니다.")
+
 
 
 # 기존 데이터를 업데이트하여 새로운 해시값으로 저장하는 코드
