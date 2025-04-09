@@ -1,188 +1,166 @@
+import os
+import time
+import datetime
 from flask import Flask, render_template, request, jsonify, session
-import json, os, time, datetime
 from werkzeug.security import generate_password_hash, check_password_hash
-import firebase_admin
-from firebase_admin import credentials, db
-
-# Firebase Admin SDK 초기화
-cred = credentials.Certificate(os.getenv('GOOGLE_APPLICATION_CREDENTIALS'))
-  # 다운로드한 서비스 계정 키 파일 경로(Enveronment 환경변수 설정)
-
-firebase_admin.initialize_app(cred, {
-    'databaseURL': 'https://ptband-a27fb-default-rtdb.asia-southeast1.firebasedatabase.app/'  # Firebase Realtime Database URL
-})
+from supabase import create_client, Client
 
 app = Flask(__name__)
-app.secret_key = 'dl9ek1gmls032601086541230'
-DATA_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data.json")
+app.secret_key = os.environ.get("FLASK_SECRET_KEY", "replace-with-your-secret")
 
-# 데이터 로드 함수
+# 1) Supabase 클라이언트 초기화
+SUPABASE_URL = os.environ["SUPABASE_URL"]
+SUPABASE_KEY = os.environ["SUPABASE_SERVICE_KEY"]
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)  # :contentReference[oaicite:0]{index=0}
 
-
-# Firebase에서 데이터 읽기
-def load_data():
-    ref = db.reference('jobs')  # 'jobs'라는 경로에서 데이터를 읽어옵니다.
-    jobs = ref.get()  # 데이터를 가져옴
-    return jobs if jobs else []  # 데이터가 없으면 빈 리스트 반환
-
-
-# 데이터 저장 함수
-# Firebase에 데이터 저장
-def save_data(data):
-    ref = db.reference('jobs')  # 'jobs'라는 경로에 데이터를 저장
-    ref.set(data)  # 전체 데이터를 덮어쓰기를 합니다. (수정 시에는 더 정교한 방법 사용 가능)
-
-
-# 타임스탬프 포맷 필터 (ISO 형식 및 정수형 처리)
+# 2) Jinja2용 날짜 포맷 필터
 @app.template_filter('datetimeformat')
 def format_datetime(value, format='%Y-%m-%d %H:%M'):
     try:
         if isinstance(value, str):
             value = datetime.datetime.fromisoformat(value)
-        elif isinstance(value, int):  # 타임스탬프가 int일 경우 처리
+        elif isinstance(value, (int, float)):
             value = datetime.datetime.fromtimestamp(value)
-        return value.strftime(format) if isinstance(value, datetime.datetime) else value
+        return value.strftime(format)
     except Exception:
         return value
 
-# 구인/구직 항목 정렬 함수
-def sort_key(job):
-    pinned = job.get("pinned", False)
-    if isinstance(pinned, str):
-        pinned = pinned.lower() == "true"
-    updated = job.get("updated_at") or job.get("created_at", 0)
-    if isinstance(updated, str):
-        try:
-            updated = datetime.datetime.fromisoformat(updated).timestamp()
-        except Exception:
-            updated = 0
-    return (pinned, updated)
-
+# 3) 메인 페이지: jobs 테이블 조회
 @app.route("/")
 def index():
-    jobs = load_data()
-    jobs.sort(key=sort_key, reverse=True)
-    locations = sorted(set(job.get("region", "경기도 > 평택시") for job in jobs))
+    resp = supabase.from_("jobs")\
+        .select("*")\
+        .order("pinned", desc=True)\
+        .order("created_at", desc=True)\
+        .execute()
+    jobs = resp.data or []
+    locations = sorted({job.get("region", "경기도 > 평택시") for job in jobs})
     types = ["전체", "구인", "구직"]
-    parts = sorted(set(part for job in jobs for part in job.get("part", [])))
-    return render_template("index.html", jobs=jobs, locations=locations, types=types, parts=parts)
+    parts = sorted({p for job in jobs for p in job.get("part", [])})
+    return render_template("index.html",
+                           jobs=jobs,
+                           locations=locations,
+                           types=types,
+                           parts=parts)
 
-
+# 4) 새 글 등록
 @app.route("/add", methods=["POST"])
 def add_job():
     item = request.get_json()
     if not item:
-        return jsonify(success=False, message="No data provided")
-    
-    # 평문 비밀번호를 PBKDF2 방식으로 해시화
-    item["password"] = generate_password_hash(item["password"])
-    
-    # 나머지 작업
-    data = load_data()  # 기존 데이터 읽기
-    item["clicks"] = 0
-    item["matched_parts"] = {}
-    item["created_at"] = int(time.time())
-    item["pinned"] = False
-    data.append(item)  # 새로운 항목 추가
+        return jsonify(success=False, message="No data provided"), 400
 
-    # Firebase에 저장
-    save_data(data)
+    # 비밀번호 해시화
+    item["password"] = generate_password_hash(item["password"])
+    item.update({
+        "created_at": datetime.datetime.utcnow().isoformat(),
+        "clicks": 0,
+        "matched_parts": [],
+        "is_matched": False,
+        "pinned": False
+    })
+
+    resp = supabase.from_("jobs")\
+        .insert([item])\
+        .execute()  # :contentReference[oaicite:1]{index=1}
+    if resp.error:
+        return jsonify(success=False, message=resp.error.message), 500
     return jsonify(success=True)
 
-
-@app.route("/click/<int:index>", methods=["POST"])
-def click(index):
-    if 'clicked' not in session:
-        session['clicked'] = {}
-    clicked = session['clicked']
-    if str(index) in clicked:
+# 5) 연락처 클릭(조회수 증가)
+@app.route("/click/<int:job_id>", methods=["POST"])
+def click(job_id):
+    clicked = session.setdefault('clicked', [])
+    if str(job_id) in clicked:
         return jsonify(success=True)
-    
-    data = load_data()
-    if 0 <= index < len(data):
-        data[index]["clicks"] = data[index].get("clicks", 0) + 1
-        save_data(data)
-        clicked[str(index)] = True
-        session['clicked'] = clicked
-        return jsonify(success=True)
-    return jsonify(success=False)
 
+    # clicks 컬럼을 +1
+    resp = supabase.from_("jobs")\
+        .update({"clicks": supabase.postgrest.raw("clicks + 1")})\
+        .eq("id", job_id)\
+        .execute()
+    if resp.error:
+        return jsonify(success=False, message=resp.error.message), 500
 
+    clicked.append(str(job_id))
+    session['clicked'] = clicked
+    return jsonify(success=True)
 
-@app.route("/verify-password/<int:index>", methods=["POST"])
-def verify_password(index):
+# 6) 비밀번호 검증 및 관리자 핀 토글
+@app.route("/verify-password/<int:job_id>", methods=["POST"])
+def verify_password(job_id):
     req = request.get_json()
-    data = load_data()
+    pw = req.get("password")
 
-    if index >= len(data):
-        return jsonify(success=False, message="잘못된 데이터입니다.")
+    # 해당 글 조회
+    resp = supabase.from_("jobs")\
+        .select("*")\
+        .eq("id", job_id)\
+        .single()\
+        .execute()
+    if resp.error or not resp.data:
+        return jsonify(success=False, message="잘못된 데이터입니다."), 404
+    job = resp.data
 
-    input_pw = req["password"]  # 사용자가 입력한 비밀번호
+    # 관리자 비번 (환경변수 ADMIN_PASSWORD) 체크
+    if pw == os.environ.get("ADMIN_PASSWORD"):
+        new_pinned = not job.get("pinned", False)
+        supabase.from_("jobs")\
+            .update({"pinned": new_pinned})\
+            .eq("id", job_id)\
+            .execute()
+        job["pinned"] = new_pinned
+        return jsonify(success=True, job=job)
 
-    # 관리자 비밀번호 확인 (관리자 비밀번호는 평문으로 비교)
-    is_admin = input_pw == "admin1234"
-    if is_admin:
-        # 관리자라면 상단 고정 상태 변경
-        data[index]["pinned"] = not data[index].get("pinned", False)  # 상단 고정 상태 토글
-        save_data(data)  # Firebase에 데이터 저장
-        return jsonify(success=True, job=data[index])
+    # 일반 사용자 비번 체크
+    if check_password_hash(job["password"], pw):
+        return jsonify(success=True, job=job)
 
-    # 저장된 비밀번호와 입력된 비밀번호를 해시로 비교
-    if check_password_hash(data[index]["password"], input_pw):
-        return jsonify(success=True, job=data[index])
+    return jsonify(success=False, message="비밀번호가 일치하지 않습니다."), 403
 
-    return jsonify(success=False, message="비밀번호가 일치하지 않습니다.")
-
-
-
-# 기존 데이터를 업데이트하여 새로운 해시값으로 저장하는 코드
-def update_password_hash():
-    data = load_data()
-    
-    for job in data:
-        if len(job["password"]) == 64:  # MD5 해시 체크 (예: 길이가 64인 값)
-            # MD5 해시를 PBKDF2 방식으로 업데이트
-            job["password"] = generate_password_hash(job["password"])
-    
-    save_data(data)
-    print("비밀번호 해시가 새 방식으로 업데이트되었습니다.")
-
-
-@app.route("/update/<int:index>", methods=["POST"])
-def update(index):
+# 7) 글 수정 및 매칭 상태 업데이트
+@app.route("/update/<int:job_id>", methods=["POST"])
+def update(job_id):
     req = request.get_json()
-    data = load_data()
+    pw = req.get("password")
 
-    if index >= len(data):
-        return jsonify(success=False, message="잘못된 데이터입니다.")
+    # 기존 데이터 조회
+    resp = supabase.from_("jobs")\
+        .select("*")\
+        .eq("id", job_id)\
+        .single()\
+        .execute()
+    if resp.error or not resp.data:
+        return jsonify(success=False, message="잘못된 데이터입니다."), 404
+    job = resp.data
 
-    input_pw = req["password"]
-    
-    is_admin = input_pw == "admin1234"
+    is_admin = pw == os.environ.get("ADMIN_PASSWORD")
+    if not is_admin and not check_password_hash(job["password"], pw):
+        return jsonify(success=False, message="비밀번호가 일치하지 않습니다."), 403
+
+    parts = req.get("parts", [])
+    updates = {
+        "team": req.get("team"),
+        "location": req.get("location"),
+        "type": req.get("type"),
+        "age": req.get("age"),
+        "intro": req.get("intro"),
+        "region": req.get("region"),
+        "updated_at": datetime.datetime.utcnow().isoformat(),
+        "matched_parts": parts,
+        "is_matched": len(parts) == len(job.get("part", []))
+    }
     if is_admin:
-        return jsonify(success=True, message="관리자 권한으로 수정 가능합니다.")
-    
-    if not check_password_hash(data[index]["password"], input_pw):
-        return jsonify(success=False, message="비밀번호가 일치하지 않습니다.")
+        updates["pinned"] = req.get("pinned") == "true"
 
-    data[index]["team"] = req["team"]
-    data[index]["location"] = req["location"]
-    data[index]["type"] = req["type"]
-    data[index]["age"] = req.get("age", "")
-    data[index]["intro"] = req["intro"]
-    data[index]["region"] = req.get("region", "경기도 > 평택시")
-    data[index]["updated_at"] = int(time.time())
+    upd = supabase.from_("jobs")\
+        .update(updates)\
+        .eq("id", job_id)\
+        .execute()
+    if upd.error:
+        return jsonify(success=False, message=upd.error.message), 500
 
-    matched = {part: True for part in req.get("parts", [])}
-    data[index]["matched_parts"] = matched
-
-    if is_admin:
-        data[index]["pinned"] = True if req.get("pinned") == "true" else False
-
-    # Firebase에 저장
-    save_data(data)
     return jsonify(success=True, message="수정이 완료되었습니다.")
-
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
