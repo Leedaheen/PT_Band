@@ -1,6 +1,12 @@
 // form-popup.js
-export default function(supabase) {
-  console.log("팝업창 열림");  // 디버깅용 로그
+export default function openForm(supabase) {
+  // ... 팝업 생성 로직
+  form.onsubmit = async e => {
+    // ...
+    await supabase.from('jobs').insert([payload]);
+    popup.remove(); // 실시간 구독이 loadJobs()를 호출해서 화면이 갱신됨
+  };
+}
 
   const popup = document.createElement('div');
   popup.className = 'fixed top-1/2 left-1/2 bg-white p-4 rounded shadow z-50 max-w-sm w-full max-h-[90%] overflow-auto';
