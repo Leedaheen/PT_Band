@@ -31,11 +31,28 @@
   const App = {
     // 4) Supabase 클라이언트 초기화
     supabase: null,
-    init: function() {
+    init() {
       this.supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+      // 1) 초기 로드
       this.loadJobs();
-      this.initRealtime();
+
+      // 2) 한 번만 구독 설정
+      this.supabase
+        .channel('public:jobs')
+        .on('postgres_changes',
+            { event: '*', schema: 'public', table: 'jobs' },
+            payload => this.loadJobs()
+        )
+        .subscribe();
     },
+    // ... loadJobs, toggleExpand, openForm, openMatchPopup 등
+  };
+
+  window.addEventListener('DOMContentLoaded', () => App.init());
+
+    // 실시간 데이터 로드
+    
 
     // 5) 전체 게시글 불러와서 렌더링
     async loadJobs() {
