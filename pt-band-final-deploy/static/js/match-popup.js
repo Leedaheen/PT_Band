@@ -1,6 +1,5 @@
 // static/js/match-popup.js
-export default async function openMatchPopup(index) {
-  const supabase = window.App.supabase;  // 전역 App.supabase 사용
+export default async function openMatchPopup(index, supabase) {
   console.log("▶️ match-popup 호출:", { index, supabase });
 
   // 1) 비밀번호 입력
@@ -18,8 +17,9 @@ export default async function openMatchPopup(index) {
     return alert("오류 발생: " + fetchError.message);
   }
 
-  // 3) 비밀번호 검증 (admin1234 예외 처리)
+  // 3) 관리자 여부 판단
   const isAdmin = pw === 'admin1234';
+  // 일반 사용자는 자신의 비밀번호와 비교
   if (!isAdmin && job.password !== pw) {
     return alert("비밀번호가 일치하지 않습니다.");
   }
@@ -39,6 +39,15 @@ export default async function openMatchPopup(index) {
   const popup = document.createElement('div');
   popup.className = 'fixed top-1/2 left-1/2 bg-white p-4 rounded shadow z-50 max-w-sm w-full max-h-[90%] overflow-auto';
   popup.style.transform = 'translate(-50%, -50%)';
+
+  // 관리자에게만 상단 고정 체크박스를 보여줍니다.
+  const pinnedField = isAdmin
+    ? `<label class="block mb-2">
+         <input type="checkbox" name="pinned" value="true"
+                ${job.pinned ? 'checked' : ''}/> 상단 고정
+       </label>`
+    : '';
+
   popup.innerHTML = `
     <div class="text-right mb-2">
       <button id="close-match-btn" class="text-sm text-red-500">✖ 닫기</button>
@@ -64,11 +73,9 @@ export default async function openMatchPopup(index) {
         <option value="서울특별시 > 강남구" ${job.region==="서울특별시 > 강남구"?'selected':''}>서울특별시 > 강남구</option>
         <option value="부산광역시 > 해운대구" ${job.region==="부산광역시 > 해운대구"?'selected':''}>부산광역시 > 해운대구</option>
       </select>
-      <label class="block mb-2">
-        <input type="checkbox" name="pinned" value="true"
-               ${job.pinned ? "checked" : ""}/>
-        상단 고정
-      </label>
+
+      ${pinnedField}
+
       <textarea name="intro" maxlength="100" placeholder="소개글"
                 class="border p-1 w-full mb-2">${job.intro||''}</textarea>
 
@@ -76,26 +83,26 @@ export default async function openMatchPopup(index) {
       ${partOptions}
 
       <div class="mt-3 text-right">
-        <button type="submit" class="bg-green-600 text-white px-3 py-1 rounded">
-          저장
-        </button>
+        <button type="submit" class="bg-green-600 text-white px-3 py-1 rounded">저장</button>
       </div>
     </form>
   `;
   document.body.appendChild(popup);
 
-  // 6) 닫기
+  // 6) 닫기 버튼
   popup.querySelector('#close-match-btn')
        .addEventListener('click', () => popup.remove());
 
-  // 7) 저장
+  // 7) 폼 제출 처리
   popup.querySelector('#match-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const form = new FormData(e.target);
+
     const selected = [...popup.querySelectorAll('input[name="match"]:checked')]
       .map(i => i.value);
     const isMatched = selected.length === parts.length;
 
+    // 업데이트 객체에 매칭 정보는 항상 포함
     const updates = {
       team:          form.get('team'),
       location:      form.get('location'),
@@ -103,10 +110,14 @@ export default async function openMatchPopup(index) {
       age:           form.get('age'),
       region:        form.get('region'),
       intro:         form.get('intro'),
-      pinned:        form.get('pinned') === 'true',
       matched_parts: selected,
       is_matched:    isMatched
     };
+
+    // 관리자일 때만 pinned 필드를 포함
+    if (isAdmin) {
+      updates.pinned = form.get('pinned') === 'true';
+    }
 
     const { error } = await supabase
       .from('jobs')
