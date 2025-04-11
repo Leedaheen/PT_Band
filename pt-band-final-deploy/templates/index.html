@@ -11,16 +11,61 @@
   <!-- Supabase JS -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/index.min.js"></script>
   <script>
+    // 배포 시 환경변수로 관리하세요
     const SUPABASE_URL  = 'https://dmjelqvpcsafottblvwx.supabase.co';
     const SUPABASE_ANON = 'YOUR_ANON_KEY';
   </script>
 </head>
 <body class="bg-gray-100 p-4">
-  <!-- (생략: 헤더 / 공지 / 필터 UI 동일) -->
+  <!-- 1) 헤더 -->
+  <div class="flex justify-between items-center mb-2">
+    <h1 class="text-xl font-bold">🚀평택 직장인/취미 밴드 구인구직</h1>
+    <button onclick="App.openForm()"
+            class="text-white bg-blue-600 hover:bg-blue-700 px-3 py-1 text-sm rounded">
+      +글 등록
+    </button>
+  </div>
 
+  <!-- 2) 공지사항 -->
+  <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-900 text-sm p-3 rounded mb-4">
+    <strong>이 게시판은 평택지역 밴드 커뮤니티용입니다. 매너를 지켜주세요!</strong><br>
+    <span class="block mt-1">
+      모든 닉네임은 오픈톡 상 닉네임과 일치시켜주세요<br>
+      <strong>예)</strong> 홍길동/보컬/30 → <strong>홍길동</strong>
+    </span>
+  </div>
+
+  <!-- 3) 필터: 타입 + 지역 -->
+  <div class="flex justify-between items-center mb-4">
+    <div class="flex space-x-1">
+      <button onclick="App.filterJobs('전체')" class="filter-btn px-2 py-1 bg-gray-200 hover:bg-gray-300 rounded text-sm">전체</button>
+      <button onclick="App.filterJobs('구인')" class="filter-btn px-2 py-1 bg-gray-200 hover:bg-gray-300 rounded text-sm">구인</button>
+      <button onclick="App.filterJobs('구직')" class="filter-btn px-2 py-1 bg-gray-200 hover:bg-gray-300 rounded text-sm">구직</button>
+      <button onclick="App.filterJobs('매칭완료')" class="filter-btn px-2 py-1 bg-gray-200 hover:bg-gray-300 rounded text-sm">매칭완료</button>
+    </div>
+    <select id="regionFilter" class="border p-1 text-sm">
+      <option value="전체">전체</option>
+    </select>
+  </div>
+
+  <!-- 4) 파트 필터 -->
+  <div class="flex items-center mb-6">
+    <label class="text-sm mr-2">파트 :</label>
+    <div class="flex flex-wrap gap-2">
+      <label><input type="checkbox" class="part-filter" value="보컬(남)" onclick="App.filterParts()"/>보컬(남)</label>
+      <label><input type="checkbox" class="part-filter" value="보컬(여)" onclick="App.filterParts()"/>보컬(여)</label>
+      <label><input type="checkbox" class="part-filter" value="드럼"    onclick="App.filterParts()"/>드럼</label>
+      <label><input type="checkbox" class="part-filter" value="베이스" onclick="App.filterParts()"/>베이스</label>
+      <label><input type="checkbox" class="part-filter" value="기타"    onclick="App.filterParts()"/>기타</label>
+      <label><input type="checkbox" class="part-filter" value="키보드" onclick="App.filterParts()"/>키보드</label>
+      <label><input type="checkbox" class="part-filter" value="그 외"  onclick="App.filterParts()"/>그 외</label>
+    </div>
+  </div>
+
+  <!-- 5) 리스트 컨테이너 -->
   <div id="job-list" class="space-y-6"></div>
 
-  <!-- ★ 여기만 type="module" 으로 바꿔주세요! -->
+  <!-- 6) 스크립트: 반드시 module 타입 -->
   <script type="module">
     const App = {
       supabase: null,
@@ -47,7 +92,7 @@
           .from('jobs').select('*').order('created_at', { ascending: false });
         if (error) return console.error(error);
 
-        // 지역 옵션 채우기
+        // 지역 필터 옵션 채우기
         const regions = Array.from(new Set(jobs.map(j=>j.region||'경기도 > 평택시')));
         const regionSel = document.getElementById('regionFilter');
         regionSel.innerHTML = '<option value="전체">전체</option>'
