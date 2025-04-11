@@ -30,44 +30,51 @@ export default function openForm(supabase) {
   popup.querySelector('#close-btn').onclick = () => popup.remove();
 
   // 동적 필드
-  const formTypeSelect = popup.querySelector('select[name="type"]');
-  const formContent    = popup.querySelector('#form-content');
-  formTypeSelect.onchange = () => renderFormFields(formContent, formTypeSelect.value);
-  renderFormFields(formContent, '구인');
+  // static/js/form-popup.js
+export default function openForm(supabase) {
+  console.log("팝업창 열림", supabase);
 
-  // 제출
-  popup.querySelector('#new-post-form').onsubmit = async e => {
+  // 팝업 생성 (생략) …
+
+  popup.querySelector('#new-post-form').onsubmit = async (e) => {
     e.preventDefault();
     const form = new FormData(e.target);
     const payload = {
-      type:     form.get('type'),
-      team:     form.get('team')     || null,
-      nickname: form.get('nickname') || null,
-      age:      form.get('age')      || null,
-      region:   form.get('region')   || '경기도 > 평택시',
-      location: form.get('location') || null,
-      fee:      form.get('fee')      || null,
-      contact:  form.get('contact')  || null,
-      intro:    form.get('intro')    || null,
-      password: form.get('password'),
-      part:     form.getAll('part'),
+      type:       form.get('type'),
+      team:       form.get('team')     || null,
+      nickname:   form.get('nickname') || null,
+      age:        form.get('age')      || null,
+      region:     form.get('region')   || '경기도 > 평택시',
+      location:   form.get('location') || null,
+      fee:        form.get('fee')      || null,
+      contact:    form.get('contact')  || null,
+      intro:      form.get('intro')    || null,
+      password:   form.get('password'),
+      part:       form.getAll('part'),
       created_at: new Date().toISOString(),
       clicks:     0,
       is_matched: false,
       pinned:     false
     };
 
+    console.log("🔽 등록할 데이터:", payload);
+    // .select()를 붙여서 삽입된 행도 함께 받아옵니다
     const { data, error } = await supabase
       .from('jobs')
-      .insert([payload]);
+      .insert([payload])
+      .select();
+    console.log("🔼 Supabase 응답:", { data, error });
+
     if (error) {
-      console.error(error);
-      alert('등록 실패: ' + error.message);
+      console.error("❌ 등록 실패:", error);
+      alert('등록 실패: ' + (error.message || JSON.stringify(error)));
     } else {
+      console.log("✅ 등록 성공, 삽입된 행:", data);
       popup.remove();
       // Realtime 구독이 자동으로 리스트 갱신
     }
   };
+
 
   function renderFormFields(container, type) {
     const checklistHTML = ['보컬(남)', '보컬(여)', '드럼', '베이스', '기타', '키보드', '그 외']
