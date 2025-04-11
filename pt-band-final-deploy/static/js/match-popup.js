@@ -1,4 +1,4 @@
-// match-popup.js
+// static/js/match-popup.js
 export default async function openMatchPopup(index, supabase) {
   // 1) 비밀번호 입력
   const pw = prompt("비밀번호를 입력하세요");
@@ -20,10 +20,10 @@ export default async function openMatchPopup(index, supabase) {
     return alert("비밀번호가 일치하지 않습니다.");
   }
 
-  // 4) 기존 매칭 정보 준비
-  const parts = job.part || [];
+  // 4) 매칭 옵션 렌더링
+  const parts        = job.part        || [];
   const matchedParts = job.matched_parts || [];
-  const partOptions = parts.map(part => `
+  const partOptions  = parts.map(part => `
     <label class="block mb-1">
       <input type="checkbox" name="match" value="${part}"
              ${matchedParts.includes(part) ? 'checked' : ''}/>
@@ -37,7 +37,7 @@ export default async function openMatchPopup(index, supabase) {
   popup.style.transform = 'translate(-50%, -50%)';
   popup.innerHTML = `
     <div class="text-right mb-2">
-      <button onclick="this.closest('div').remove()" class="text-sm text-red-500">✖ 닫기</button>
+      <button class="close-btn text-sm text-red-500">✖ 닫기</button>
     </div>
     <form id="match-form">
       <p class="mb-2 text-sm font-semibold">글 수정 및 매칭완료 설정</p>
@@ -84,39 +84,45 @@ export default async function openMatchPopup(index, supabase) {
       </div>
     </form>
   `;
+
   document.body.appendChild(popup);
 
-  // 6) 폼 제출 처리
+  // 6) 닫기 버튼
+  popup.querySelector('.close-btn')
+       .addEventListener('click', () => popup.remove());
+
+  // 7) 폼 제출 처리
   popup.querySelector('#match-form').onsubmit = async (e) => {
     e.preventDefault();
     const form = new FormData(e.target);
 
-    const selectedParts = [...e.target.querySelectorAll('input[name="match"]:checked')]
-      .map(chk => chk.value);
-    const isMatched = selectedParts.length === parts.length;
+    const selected = [...popup.querySelectorAll('input[name="match"]:checked')]
+      .map(i => i.value);
+    const isMatched = selected.length === parts.length;
 
     const updates = {
-      team: form.get('team'),
-      location: form.get('location'),
-      type: form.get('type'),
-      age: form.get('age'),
-      region: form.get('region'),
-      intro: form.get('intro'),
-      pinned: form.get('pinned') === 'true',
-      matched_parts: selectedParts,
-      is_matched: isMatched
+      team:          form.get('team'),
+      location:      form.get('location'),
+      type:          form.get('type'),
+      age:           form.get('age'),
+      region:        form.get('region'),
+      intro:         form.get('intro'),
+      pinned:        form.get('pinned') === 'true',
+      matched_parts: selected,
+      is_matched:    isMatched
     };
 
-    const { error: updateError } = await supabase
+    const { error } = await supabase
       .from('jobs')
       .update(updates)
       .eq('id', index);
 
-    if (updateError) {
-      console.error(updateError);
-      alert("저장 실패: " + updateError.message);
+    if (error) {
+      console.error(error);
+      alert("저장 실패: " + error.message);
     } else {
       popup.remove();
+      // 메인 스크립트의 Realtime 구독이 자동으로 App.loadJobs()를 호출합니다
     }
   };
 }
