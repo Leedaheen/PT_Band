@@ -10,7 +10,7 @@ app.secret_key = os.environ.get("FLASK_SECRET_KEY", "replace-with-your-secret")
 
 # 1) Supabase 클라이언트 초기화
 SUPABASE_URL = os.environ["SUPABASE_URL"]
-SUPABASE_KEY = os.environ["SUPABASE_KEY"]
+SUPABASE_KEY = os.environ["SUPABASE_SERVICE_KEY"]
 
 supabase: Client = create_client("https://dmjelqvpcsafottblvwx.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRtamVscXZwY3NhZm90dGJsdnd4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0NDE5MDM0NywiZXhwIjoyMDU5NzY2MzQ3fQ.YSxZvj9N-8Mkfhyrb7vuQNLGy6hydrOCPmxWKZekuZE")
 
