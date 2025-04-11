@@ -1,214 +1,134 @@
-<script type="module">
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON);
+// static/js/match-popup.js
+export default async function openMatchPopup(index) {
+  // 전역 App.supabase 사용
+  const supabase = window.App.supabase;
+  console.log("▶️ match-popup 호출:", { index, supabase });
 
-const App = {
-  supabase,
-  jobs: [],
-  filteredJobs: [],
-  pageSize: 10,
-  currentPage: 1,
-  selectedType: '전체',
+  // 1) 비밀번호 입력
+  const pw = prompt("비밀번호를 입력하세요");
+  if (!pw) return;
 
-  init() {
-    console.log("✅ App.init", this.supabase);
-    this.loadJobs();
-    this.initRealtime();
-
-    document.getElementById('open-form-btn')
-      .addEventListener('click', () => this.openForm());
-
-    document.querySelectorAll('.filter-btn')
-      .forEach(btn => btn.addEventListener('click', () => {
-        this.selectedType = btn.textContent;
-        this.applyFilters();
-      }));
-
-    document.getElementById('regionFilter')
-      .addEventListener('change', () => this.applyFilters());
-
-    document.querySelectorAll('.part-filter')
-      .forEach(chk => chk.addEventListener('change', () => this.applyFilters()));
-  },
-
-  initRealtime() {
-    this.supabase
-      .channel('public:jobs')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'jobs' },
-          () => this.loadJobs()
-      )
-      .subscribe();
-  },
-
-  async loadJobs() {
-    const { data, error } = await this.supabase
-      .from('jobs').select('*').order('created_at', { ascending: false });
-    if (error) return console.error("❌ loadJobs 오류:", error);
-    this.jobs = data;
-
-    // 지역 옵션 갱신
-    const regions = Array.from(new Set(this.jobs.map(j=>j.region||'경기도 > 평택시')));
-    const regionSel = document.getElementById('regionFilter');
-    regionSel.innerHTML = '<option value="전체">전체</option>' +
-      regions.map(r=>`<option value="${r}">${r}</option>`).join('');
-
-    this.applyFilters();
-  },
-
-  applyFilters() {
-    const region = document.getElementById('regionFilter').value;
-    const parts  = [...document.querySelectorAll('.part-filter:checked')].map(c=>c.value);
-
-    this.filteredJobs = this.jobs.filter(job => {
-      let ok = true;
-      if (this.selectedType==='매칭완료') ok = job.is_matched;
-      else if (this.selectedType!=='전체') ok = job.type===this.selectedType;
-      if (ok && region!=='전체') ok = (job.region||'경기도 > 평택시')===region;
-
-      if (ok && parts.length) {
-        let arr = [];
-        if (Array.isArray(job.part)) arr = job.part;
-        else if (typeof job.part==='string') {
-          try { arr = JSON.parse(job.part); }
-          catch { arr = job.part.split(','); }
-        }
-        ok = parts.some(p=>arr.includes(p));
-      }
-      return ok;
-    });
-
-    this.currentPage = 1;
-    this.renderPage();
-    this.renderPagination();
-  },
-
-  renderPage() {
-    const start = (this.currentPage - 1) * this.pageSize;
-    this.renderJobs(this.filteredJobs.slice(start, start + this.pageSize));
-  },
-
-  renderJobs(jobs) {
-    const container = document.getElementById('job-list');
-    container.innerHTML = '';
-
-    jobs.forEach(job => {
-      // part 배열 보장
-      let partsArray = [];
-      if (Array.isArray(job.part)) partsArray = job.part;
-      else if (typeof job.part==='string') {
-        try { partsArray = JSON.parse(job.part); }
-        catch { partsArray = job.part.split(','); }
-      }
-
-      const emojiMap = {
-        '보컬(남)':'🎤','보컬(여)':'🎤','드럼':'🥁',
-        '베이스':'🎸','기타':'🎸','키보드':'🎹','그 외':'🔸'
-      };
-      const partsHtml = partsArray.map(p=>`${emojiMap[p]||''}${p}`).join(' / ');
-
-      // 깔끔한 리본 배지
-      const pinHtml = job.pinned
-        ? `<div class="absolute top-2 right-2 bg-yellow-400 text-gray-800 text-xs font-bold px-2 py-0.5 transform rotate-45 shadow-md origin-top-right">PINNED</div>`
-        : '';
-
-      const el = document.createElement('div');
-      el.className = 'bg-white p-4 rounded shadow relative job-item';
-      el.dataset.id      = job.id;
-      el.dataset.type    = job.type;
-      el.dataset.matched = job.is_matched;
-      el.dataset.pinned  = job.pinned;
-      el.dataset.region  = job.region||'경기도 > 평택시';
-      el.dataset.parts   = partsArray.join(',');
-
-      el.innerHTML = `
-        <div class="relative">
-          ${pinHtml}
-          <h2 class="text-lg font-semibold mb-1">
-            ${job.type==='구직' ? `[ ${partsHtml} ]` : `[${job.team||'팀명 미정'}]`}
-            <span class="text-sm text-gray-500 ml-1">
-              (${job.region||'경기도 > 평택시'} / ${job.type==='구직'?'데려가세요!':'모집합니다!'})
-            </span>
-          </h2>
-          <p class="text-sm text-gray-600 mb-2">
-            ${job.type==='구인'
-              ? `<strong>${partsHtml}</strong> 멤버가 필요해요!`
-              : job.intro||''}
-          </p>
-          <div class="expand-content hidden text-sm text-gray-600 mb-2">
-            <p><strong>오픈톡 닉네임:</strong> ${job.nickname||'-'}</p>
-            <p><strong>위치:</strong> ${job.location||'-'}</p>
-            <p><strong>나이:</strong> ${job.age||'-'}</p>
-            ${job.fee?`<p><strong>월 회비:</strong> ${job.fee}</p>`:''}
-            <p><strong>소개:</strong> ${job.intro||'-'}</p>
-          </div>
-          <div class="flex justify-between items-end">
-            <span class="text-xs text-blue-500 cursor-pointer" onclick="App.toggleExpand(this)">&lt;더 보기&gt;</span>
-            <div class="text-right">
-              <p class="text-xs text-gray-400 mb-1">🕒 ${new Date(job.updated_at||job.created_at).toLocaleString()}</p>
-              <a href="tel:${job.contact}"
-                 onclick="App.incrementClick(${job.id})"
-                 class="text-xs bg-blue-500 text-white px-1.5 py-[9px] rounded inline-block">
-                연락처 확인
-              </a>
-              <p class="text-xs text-gray-400 mt-1">👁 <span class="click-count">${job.clicks||0}</span>명이 확인</p>
-            </div>
-          </div>
-          <div class="absolute top-2 right-3">
-            <button class="text-xs text-gray-600 hover:underline"
-                    onclick="App.openMatchPopup(${job.id})">
-              매칭상태 변경
-            </button>
-          </div>
-        </div>`;
-      container.appendChild(el);
-    });
-  },
-
-  renderPagination() {
-    const total = Math.ceil(this.filteredJobs.length / this.pageSize);
-    const pager = document.getElementById('pagination');
-    pager.innerHTML = '';
-    for (let i = 1; i <= total; i++) {
-      const btn = document.createElement('button');
-      btn.textContent = i;
-      btn.className = `px-3 py-1 border rounded ${i===this.currentPage?'bg-blue-600 text-white':'bg-white'}`;
-      btn.addEventListener('click', () => {
-        this.currentPage = i;
-        this.renderPage();
-      });
-      pager.appendChild(btn);
-    }
-  },
-
-  toggleExpand(el) {
-    const content = el.closest('.job-item').querySelector('.expand-content');
-    content.classList.toggle('hidden');
-    el.textContent = content.classList.contains('hidden') ? '<더 보기>' : '<접기>';
-  },
-
-  async incrementClick(id) {
-    const job = this.jobs.find(j=>j.id===id);
-    const newCount = (job.clicks||0) + 1;
-    const { error } = await this.supabase
-      .from('jobs').update({ clicks: newCount }).eq('id', id);
-    if (error) return console.error("❌ incrementClick 오류:", error);
-    job.clicks = newCount;
-    this.renderPage();
-  },
-
-  openForm() {
-    import('/static/js/form-popup.js')
-      .then(m=>m.default(this.supabase))
-      .catch(console.error);
-  },
-
-  openMatchPopup(id) {
-    import('/static/js/match-popup.js')
-      .then(m=>m.default(id))
-      .catch(console.error);
+  // 2) 해당 글 가져오기
+  const { data: job, error: fetchError } = await supabase
+    .from('jobs')
+    .select('*')
+    .eq('id', index)
+    .single();
+  if (fetchError) {
+    console.error("❌ 글 조회 오류:", fetchError);
+    return alert("오류 발생: " + fetchError.message);
   }
-};
 
-window.App = App;
-App.init();
-</script>
+  // 3) 관리자 여부 판단
+  const isAdmin = pw === 'admin1234';
+  // 일반 사용자는 본인 비밀번호(plain)와 비교
+  if (!isAdmin && job.password !== pw) {
+    return alert("비밀번호가 일치하지 않습니다.");
+  }
+
+  // 4) 매칭 옵션 렌더링 준비
+  const parts        = Array.isArray(job.part) ? job.part : [];
+  const matchedParts = Array.isArray(job.matched_parts) ? job.matched_parts : [];
+  const partOptions  = parts.map(part => `
+    <label class="block mb-1">
+      <input type="checkbox" name="match" value="${part}"
+             ${matchedParts.includes(part) ? 'checked' : ''}/>
+      ${part}
+    </label>
+  `).join('');
+
+  // 5) 팝업 생성
+  const popup = document.createElement('div');
+  popup.className = 'fixed top-1/2 left-1/2 bg-white p-4 rounded shadow z-50 max-w-sm w-full max-h-[90%] overflow-auto';
+  popup.style.transform = 'translate(-50%, -50%)';
+
+  // 관리자에게만 보일 pinned 체크박스
+  const pinnedField = isAdmin
+    ? `<label class="block mb-2">
+         <input type="checkbox" name="pinned" value="true"
+                ${job.pinned ? 'checked' : ''}/> 상단 고정
+       </label>`
+    : '';
+
+  popup.innerHTML = `
+    <div class="text-right mb-2">
+      <button id="close-match-btn" class="text-sm text-red-500">✖ 닫기</button>
+    </div>
+    <form id="match-form">
+      <p class="mb-2 text-sm font-semibold">글 수정 및 매칭완료 설정</p>
+
+      <input type="text" name="team" value="${job.team||''}"
+             placeholder="팀명" class="border p-1 w-full mb-2"/>
+      <input type="text" name="location" value="${job.location||''}"
+             placeholder="위치" class="border p-1 w-full mb-2"/>
+      <select required name="type" class="border p-1 w-full mb-2">
+        <option value="구인" ${job.type==='구인'?'selected':''}>구인</option>
+        <option value="구직" ${job.type==='구직'?'selected':''}>구직</option>
+      </select>
+      <input type="text" name="age" value="${job.age||''}"
+             placeholder="연령대" class="border p-1 w-full mb-2"/>
+      <select required name="region" class="border p-1 w-full mb-2">
+        <option value="경기도 > 평택시" ${job.region==="경기도 > 평택시"?'selected':''}>경기도 > 평택시</option>
+        <option value="경기도 > 오산시" ${job.region==="경기도 > 오산시"?'selected':''}>경기도 > 오산시</option>
+        <option value="경기도 > 화성시" ${job.region==="경기도 > 화성시"?'selected':''}>경기도 > 화성시</option>
+        <option value="경기도 > 안성시" ${job.region==="경기도 > 안성시"?'selected':''}>경기도 > 안성시</option>
+        <option value="서울특별시 > 강남구" ${job.region==="서울특별시 > 강남구"?'selected':''}>서울특별시 > 강남구</option>
+        <option value="부산광역시 > 해운대구" ${job.region==="부산광역시 > 해운대구"?'selected':''}>부산광역시 > 해운대구</option>
+      </select>
+
+      ${pinnedField}
+
+      <textarea name="intro" maxlength="100" placeholder="소개글"
+                class="border p-1 w-full mb-2">${job.intro||''}</textarea>
+
+      <p class="mb-1 text-sm">✅ 매칭 완료할 파트를 선택하세요:</p>
+      ${partOptions}
+
+      <div class="mt-3 text-right">
+        <button type="submit" class="bg-green-600 text-white px-3 py-1 rounded">저장</button>
+      </div>
+    </form>
+  `;
+  document.body.appendChild(popup);
+
+  // 6) 닫기 버튼
+  popup.querySelector('#close-match-btn')
+       .addEventListener('click', () => popup.remove());
+
+  // 7) 폼 제출 처리
+  popup.querySelector('#match-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = new FormData(e.target);
+
+    const selected = [...popup.querySelectorAll('input[name="match"]:checked')]
+      .map(i => i.value);
+    const isMatched = selected.length === parts.length;
+
+    const updates = {
+      team:          form.get('team'),
+      location:      form.get('location'),
+      type:          form.get('type'),
+      age:           form.get('age'),
+      region:        form.get('region'),
+      intro:         form.get('intro'),
+      matched_parts: selected,
+      is_matched:    isMatched
+    };
+
+    if (isAdmin) {
+      updates.pinned = form.get('pinned') === 'true';
+    }
+
+    const { error } = await supabase
+      .from('jobs')
+      .update(updates)
+      .eq('id', index);
+
+    if (error) {
+      console.error("❌ 저장 실패:", error);
+      alert("저장 실패: " + error.message);
+    } else {
+      popup.remove();
+    }
+  });
+}
