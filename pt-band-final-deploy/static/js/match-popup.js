@@ -1,288 +1,123 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>구인/구직 게시판</title>
-  <link rel="icon" href="/static/favicon.ico"/>
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet"/>
+// static/js/match-popup.js
+export default async function openMatchPopup(index, supabase) {
+  console.log("▶️ match-popup 호출:", { index, supabase });
 
-  <script>
-    // 실제 배포 시엔 환경변수로 관리하세요
-    const SUPABASE_URL  = 'https://dmjelqvpcsafottblvwx.supabase.co';
-    const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.…';  // 실제 anon key
-  </script>
-</head>
-<body class="bg-gray-100 p-4">
-  <!-- 헤더 -->
-  <div class="flex justify-between items-center mb-2">
-    <h1 class="text-xl font-bold">🚀평택 직장인/취미 밴드 구인구직</h1>
-    <button id="open-form-btn"
-            class="text-white bg-blue-600 hover:bg-blue-700 px-3 py-1 text-sm rounded">
-      +글 등록
-    </button>
-  </div>
+  // 1) 비밀번호 입력
+  const pw = prompt("비밀번호를 입력하세요");
+  if (!pw) return;
 
-  <!-- 공지사항 -->
-  <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-900 text-sm p-3 rounded mb-4">
-    <strong>이 게시판은 평택지역 밴드 커뮤니티용입니다. 매너를 지켜주세요!</strong><br>
-    <span class="block mt-1">
-      모든 닉네임은 오픈톡 상 닉네임과 일치시켜주세요<br>
-      <strong>예)</strong> 홍길동/보컬/30 → <strong>홍길동</strong>
-    </span>
-  </div>
+  // 2) 해당 글 가져오기
+  const { data: job, error: fetchError } = await supabase
+    .from('jobs')
+    .select('*')
+    .eq('id', index)
+    .single();
+  if (fetchError) {
+    console.error("❌ 글 조회 오류:", fetchError);
+    return alert("오류 발생: " + fetchError.message);
+  }
 
-  <!-- 필터: 타입 + 지역 -->
-  <div class="flex justify-between items-center mb-4">
-    <div class="flex space-x-1">
-      <button class="filter-btn px-2 py-1 bg-gray-200 hover:bg-gray-300 rounded text-sm">전체</button>
-      <button class="filter-btn px-2 py-1 bg-gray-200 hover:bg-gray-300 rounded text-sm">구인</button>
-      <button class="filter-btn px-2 py-1 bg-gray-200 hover:bg-gray-300 rounded text-sm">구직</button>
-      <button class="filter-btn px-2 py-1 bg-gray-200 hover:bg-gray-300 rounded text-sm">매칭완료</button>
+  // 3) 비밀번호 검증 (admin1234는 무조건 통과)
+  const isAdmin = pw === 'admin1234';
+  if (!isAdmin && job.password !== pw) {
+    return alert("비밀번호가 일치하지 않습니다.");
+  }
+
+  // 4) 매칭 옵션 렌더링 준비
+  const parts        = Array.isArray(job.part) ? job.part : [];
+  const matchedParts = Array.isArray(job.matched_parts) ? job.matched_parts : [];
+  const partOptions  = parts.map(part => `
+    <label class="block mb-1">
+      <input type="checkbox" name="match" value="${part}"
+             ${matchedParts.includes(part) ? 'checked' : ''}/>
+      ${part}
+    </label>
+  `).join('');
+
+  // 5) 팝업 생성
+  const popup = document.createElement('div');
+  popup.className = 'fixed top-1/2 left-1/2 bg-white p-4 rounded shadow z-50 max-w-sm w-full max-h-[90%] overflow-auto';
+  popup.style.transform = 'translate(-50%, -50%)';
+  popup.innerHTML = `
+    <div class="text-right mb-2">
+      <button id="close-match-btn" class="text-sm text-red-500">✖ 닫기</button>
     </div>
-    <select id="regionFilter" class="border p-1 text-sm">
-      <option value="전체">전체</option>
-    </select>
-  </div>
+    <form id="match-form">
+      <p class="mb-2 text-sm font-semibold">글 수정 및 매칭완료 설정</p>
 
-  <!-- 파트 필터 -->
-  <div class="flex items-center mb-6">
-    <label class="text-sm mr-2">파트 :</label>
-    <div class="flex flex-wrap gap-2">
-      <label><input type="checkbox" class="part-filter" value="보컬(남)"/>보컬(남)</label>
-      <label><input type="checkbox" class="part-filter" value="보컬(여)"/>보컬(여)</label>
-      <label><input type="checkbox" class="part-filter" value="드럼"/>드럼</label>
-      <label><input type="checkbox" class="part-filter" value="베이스"/>베이스</label>
-      <label><input type="checkbox" class="part-filter" value="기타"/>기타</label>
-      <label><input type="checkbox" class="part-filter" value="키보드"/>키보드</label>
-      <label><input type="checkbox" class="part-filter" value="그 외"/>그 외</label>
-    </div>
-  </div>
+      <input type="text" name="team" value="${job.team||''}"
+             placeholder="팀명" class="border p-1 w-full mb-2"/>
+      <input type="text" name="location" value="${job.location||''}"
+             placeholder="위치" class="border p-1 w-full mb-2"/>
+      <select required name="type" class="border p-1 w-full mb-2">
+        <option value="구인" ${job.type==='구인'?'selected':''}>구인</option>
+        <option value="구직" ${job.type==='구직'?'selected':''}>구직</option>
+      </select>
+      <input type="text" name="age" value="${job.age||''}"
+             placeholder="연령대" class="border p-1 w-full mb-2"/>
+      <select required name="region" class="border p-1 w-full mb-2">
+        <option value="경기도 > 평택시" ${job.region==="경기도 > 평택시"?'selected':''}>경기도 > 평택시</option>
+        <option value="경기도 > 오산시" ${job.region==="경기도 > 오산시"?'selected':''}>경기도 > 오산시</option>
+        <option value="경기도 > 화성시" ${job.region==="경기도 > 화성시"?'selected':''}>경기도 > 화성시</option>
+        <option value="경기도 > 안성시" ${job.region==="경기도 > 안성시"?'selected':''}>경기도 > 안성시</option>
+        <option value="서울특별시 > 강남구" ${job.region==="서울특별시 > 강남구"?'selected':''}>서울특별시 > 강남구</option>
+        <option value="부산광역시 > 해운대구" ${job.region==="부산광역시 > 해운대구"?'selected':''}>부산광역시 > 해운대구</option>
+      </select>
+      <label class="block mb-2">
+        <input type="checkbox" name="pinned" value="true"
+               ${job.pinned ? "checked" : ""}/>
+        상단 고정
+      </label>
+      <textarea name="intro" maxlength="100" placeholder="소개글"
+                class="border p-1 w-full mb-2">${job.intro||''}</textarea>
 
-  <!-- 리스트 + 페이징 -->
-  <div id="job-list" class="space-y-6"></div>
-  <div id="pagination" class="mt-4 flex justify-center items-center space-x-2"></div>
+      <p class="mb-1 text-sm">✅ 매칭 완료할 파트를 선택하세요:</p>
+      ${partOptions}
 
-  <!-- ESM 모듈 스크립트 -->
-  <script type="module">
-    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
-    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON);
+      <div class="mt-3 text-right">
+        <button type="submit" class="bg-green-600 text-white px-3 py-1 rounded">
+          저장
+        </button>
+      </div>
+    </form>
+  `;
+  document.body.appendChild(popup);
 
-    const App = {
-      supabase,
-      jobs: [],
-      filteredJobs: [],
-      pageSize: 10,
-      currentPage: 1,
-      selectedType: '전체',
+  // 6) 닫기 버튼
+  popup.querySelector('#close-match-btn')
+       .addEventListener('click', () => popup.remove());
 
-      init() {
-        console.log("✅ App.init: Supabase 준비됨", this.supabase);
-        this.loadJobs();
-        this.initRealtime();
+  // 7) 폼 제출 처리
+  popup.querySelector('#match-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = new FormData(e.target);
 
-        // 글 등록 버튼
-        document.getElementById('open-form-btn')
-          .addEventListener('click', () => this.openForm());
+    const selected = [...popup.querySelectorAll('input[name="match"]:checked')]
+      .map(i => i.value);
+    const isMatched = selected.length === parts.length;
 
-        // 타입 필터 버튼들
-        document.querySelectorAll('.filter-btn')
-          .forEach(btn => btn.addEventListener('click', () => {
-            this.selectedType = btn.textContent;
-            this.applyFilters();
-          }));
-
-        // 지역 필터
-        document.getElementById('regionFilter')
-          .addEventListener('change', () => this.applyFilters());
-
-        // 파트 필터
-        document.querySelectorAll('.part-filter')
-          .forEach(chk => chk.addEventListener('change', () => this.applyFilters()));
-      },
-
-      initRealtime() {
-        this.supabase
-          .channel('public:jobs')
-          .on('postgres_changes',
-              { event: '*', schema: 'public', table: 'jobs' },
-              () => this.loadJobs()
-          )
-          .subscribe();
-      },
-
-      async loadJobs() {
-        const { data, error } = await this.supabase
-          .from('jobs').select('*').order('created_at', { ascending: false });
-        if (error) return console.error("❌ loadJobs 오류:", error);
-        this.jobs = data;
-
-        // 지역 필터 옵션 갱신
-        const regions = Array.from(new Set(this.jobs.map(j=>j.region||'경기도 > 평택시')));
-        const regionSel = document.getElementById('regionFilter');
-        regionSel.innerHTML = '<option value="전체">전체</option>' +
-          regions.map(r=>`<option value="${r}">${r}</option>`).join('');
-
-        this.applyFilters();
-      },
-
-      applyFilters() {
-        const region = document.getElementById('regionFilter').value;
-        const parts  = [...document.querySelectorAll('.part-filter:checked')].map(c=>c.value);
-
-        this.filteredJobs = this.jobs.filter(job => {
-          let ok = true;
-          if (this.selectedType==='매칭완료') ok = job.is_matched;
-          else if (this.selectedType!=='전체') ok = job.type===this.selectedType;
-          if (ok && region!=='전체') ok = (job.region||'경기도 > 평택시')===region;
-
-          if (ok && parts.length) {
-            let arr = [];
-            if (Array.isArray(job.part)) arr = job.part;
-            else if (typeof job.part==='string') {
-              try { arr = JSON.parse(job.part); }
-              catch { arr = job.part.split(','); }
-            }
-            ok = parts.some(p=>arr.includes(p));
-          }
-          return ok;
-        });
-
-        this.currentPage = 1;
-        this.renderPage();
-        this.renderPagination();
-      },
-
-      renderPage() {
-        const start = (this.currentPage-1)*this.pageSize;
-        this.renderJobs(this.filteredJobs.slice(start, start+this.pageSize));
-      },
-
-      renderJobs(jobs) {
-        const container = document.getElementById('job-list');
-        container.innerHTML = '';
-
-        jobs.forEach(job => {
-          // part 배열 보장
-          let partsArray = [];
-          if (Array.isArray(job.part)) partsArray = job.part;
-          else if (typeof job.part==='string') {
-            try { partsArray = JSON.parse(job.part); }
-            catch { partsArray = job.part.split(','); }
-          }
-
-          const emojiMap = {'보컬(남)':'🎤','보컬(여)':'🎤','드럼':'🥁','베이스':'🎸','기타':'🎸','키보드':'🎹','그 외':'🔸'};
-          const partsHtml = partsArray.map(p=>`${emojiMap[p]||''}${p}`).join(' / ');
-          const partsData = partsArray.join(',');
-
-          const pinHtml = job.pinned
-            ? `<span class="absolute top-1 left-1 text-yellow-500">📌</span>`
-            : '';
-
-          const el = document.createElement('div');
-          el.className = 'bg-white p-4 rounded shadow relative job-item';
-          el.dataset.id      = job.id;
-          el.dataset.type    = job.type;
-          el.dataset.matched = job.is_matched;
-          el.dataset.pinned  = job.pinned;
-          el.dataset.region  = job.region||'경기도 > 평택시';
-          el.dataset.parts   = partsData;
-
-          el.innerHTML = `
-            <div class="relative">
-              ${pinHtml}
-              <h2 class="text-lg font-semibold mb-1">
-                ${job.type==='구직' ? `[ ${partsHtml} ]` : `[${job.team||'팀명 미정'}]`}
-                <span class="text-sm text-gray-500 ml-1">
-                  (${job.region||'경기도 > 평택시'} / ${job.type==='구직'?'데려가세요!':'모집합니다!'})
-                </span>
-              </h2>
-              <p class="text-sm text-gray-600 mb-2">
-                ${job.type==='구인'
-                  ? `<strong>${partsHtml}</strong> 멤버가 필요해요!`
-                  : job.intro||''}
-              </p>
-              <div class="expand-content hidden text-sm text-gray-600 mb-2">
-                <p><strong>오픈톡 닉네임:</strong> ${job.nickname||'-'}</p>
-                <p><strong>위치:</strong> ${job.location||'-'}</p>
-                <p><strong>나이:</strong> ${job.age||'-'}</p>
-                ${job.fee?`<p><strong>월 회비:</strong> ${job.fee}</p>`:''}
-                <p><strong>소개:</strong> ${job.intro||'-'}</p>
-              </div>
-              <div class="flex justify-between items-end">
-                <span class="text-xs text-blue-500 cursor-pointer" onclick="App.toggleExpand(this)">&lt;더 보기&gt;</span>
-                <div class="text-right">
-                  <p class="text-xs text-gray-400 mb-1">🕒 ${new Date(job.updated_at||job.created_at).toLocaleString()}</p>
-                <a href="tel:${job.contact}"
-                onclick="App.incrementClick(${job.id})"class="text-xs bg-blue-500 text-white px-1.5 py-[9px] rounded inline-block">연락처 확인</a>
-                  <p class="text-xs text-gray-400 mt-1">👁 <span class="click-count">${job.clicks||0}</span>명이 확인</p>
-                </div>
-              </div>
-              <div class="absolute top-2 right-3">
-                <button class="text-xs text-gray-600 hover:underline"
-                        onclick="App.openMatchPopup(${job.id})">
-                  매칭상태 변경
-                </button>
-              </div>
-            </div>`;
-          container.appendChild(el);
-        });
-      },
-
-      renderPagination() {
-        const total = Math.ceil(this.filteredJobs.length/this.pageSize);
-        const pager = document.getElementById('pagination');
-        pager.innerHTML = '';
-        for (let i=1; i<=total; i++) {
-          const btn = document.createElement('button');
-          btn.textContent = i;
-          btn.className = `px-3 py-1 border rounded ${i===this.currentPage?'bg-blue-600 text-white':'bg-white'}`;
-          btn.addEventListener('click', () => {
-            this.currentPage = i;
-            this.renderPage();
-          });
-          pager.appendChild(btn);
-        }
-      },
-
-      toggleExpand(el) {
-        const content = el.closest('.job-item').querySelector('.expand-content');
-        content.classList.toggle('hidden');
-        el.textContent = content.classList.contains('hidden') ? '<더 보기>' : '<접기>';
-      },
-
-      async incrementClick(id) {
-        const job = this.jobs.find(j=>j.id===id);
-        const newCount = (job.clicks||0) + 1;
-        const { error } = await this.supabase.from('jobs').update({ clicks: newCount }).eq('id', id);
-        if (error) return console.error("❌ incrementClick 오류:", error);
-        job.clicks = newCount;
-        this.renderPage();
-      },
-
-      openForm() {
-        import('/static/js/form-popup.js')
-          .then(m=>m.default(this.supabase))
-          .catch(console.error);
-      },
-
-      openMatchPopup(id, supabase) {
-        import('/static/js/match-popup.js')
-          .then(m=>m.default(id, supabase))
-          .catch(console.error);
-      }
+    const updates = {
+      team:          form.get('team'),
+      location:      form.get('location'),
+      type:          form.get('type'),
+      age:           form.get('age'),
+      region:        form.get('region'),
+      intro:         form.get('intro'),
+      pinned:        form.get('pinned') === 'true',
+      matched_parts: selected,
+      is_matched:    isMatched
     };
 
-    window.App = App;
-    App.init();
-  </script>
+    const { error } = await supabase
+      .from('jobs')
+      .update(updates)
+      .eq('id', index);
 
-  <!-- 오픈톡 바로가기 버튼 -->
-  <a href="https://open.kakao.com/o/gnz12iXg" target="_blank"
-     class="fixed bottom-4 right-4 flex items-center bg-yellow-400 hover:bg-yellow-500 text-black px-3 py-2 rounded shadow-lg">
-    <img src="https://developers.kakao.com/assets/img/about/logos/kakaolink/kakaolink_btn_small.png"
-         alt="Kakao Open Chat" class="w-6 h-6 mr-2"/>
-    <span class="text-sm font-medium">오픈톡 바로가기</span>
-  </a>
-</body>
-</html>
+    if (error) {
+      console.error("❌ 저장 실패:", error);
+      alert("저장 실패: " + error.message);
+    } else {
+      popup.remove();
+    }
+  });
+}
