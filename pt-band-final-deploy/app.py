@@ -3,7 +3,7 @@ import time
 import datetime
 from flask import Flask, render_template, request, jsonify, session
 from werkzeug.security import generate_password_hash, check_password_hash
-from supabase import create_client, Client
+from supabase import create_client
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "replace-with-your-secret")
