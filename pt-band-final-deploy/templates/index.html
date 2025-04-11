@@ -213,7 +213,8 @@
                 <span class="text-xs text-blue-500 cursor-pointer" onclick="App.toggleExpand(this)">&lt;더 보기&gt;</span>
                 <div class="text-right">
                   <p class="text-xs text-gray-400 mb-1">🕒 ${new Date(job.updated_at||job.created_at).toLocaleString()}</p>
-                  <button onclick="App.incrementClick(${job.id})" class="text-xs bg-blue-500 text-white px-1.5 py-[9px] rounded">연락처 확인</button>
+                <a href="tel:${job.contact}"
+                onclick="App.incrementClick(${job.id})"class="text-xs bg-blue-500 text-white px-1.5 py-[9px] rounded inline-block">연락처 확인</a>
                   <p class="text-xs text-gray-400 mt-1">👁 <span class="click-count">${job.clicks||0}</span>명이 확인</p>
                 </div>
               </div>
