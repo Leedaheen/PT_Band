@@ -65,10 +65,20 @@
   <div id="job-list" class="space-y-6"></div>
   <div id="pagination" class="mt-4 flex justify-center items-center space-x-2"></div>
 
+  
+<!--###################################################################################################################################-->
+
+  
   <!-- module 타입으로 해야 import() 동작 -->
  <script type="module">
+  // 1) ESM 방식으로 Supabase 불러오기
+  import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+
+  // 2) 환경변수로 정의한 URL/KEY로 클라이언트 생성
+  const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON);
+
   const App = {
-    supabase: null,
+    supabase: supabaseClient,   // supabaseClient 할당
     jobs: [],
     filteredJobs: [],
     pageSize: 10,
@@ -76,15 +86,11 @@
     selectedType: '전체',
 
     init() {
-      // ① Supabase 클라이언트 초기화
-      this.supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
-      console.log("✅ App.init: supabase client ready", this.supabase);
-
-      // ② 데이터 로드 & Realtime 구독
+      console.log("✅ App.init: Supabase ready", this.supabase);
       this.loadJobs();
       this.initRealtime();
 
-      // ③ UI 이벤트 바인딩
+      // 버튼 & 필터 이벤트 바인딩
       document.getElementById('open-form-btn')
               .addEventListener('click', () => this.openForm());
       document.querySelectorAll('.filter-btn')
@@ -111,7 +117,7 @@
     async loadJobs() {
       const { data, error } = await this.supabase
         .from('jobs').select('*').order('created_at', { ascending: false });
-      if (error) return console.error("❌ loadJobs error", error);
+      if (error) return console.error("❌ loadJobs:", error);
       this.jobs = data;
 
       // 지역 필터 옵션 채우기
@@ -152,7 +158,50 @@
       jobs.forEach(job => {
         const el = document.createElement('div');
         el.className = 'bg-white p-4 rounded shadow relative job-item';
-        // ... (기존 renderJobs 내부 로직 그대로) ...
+        el.dataset.id      = job.id;
+        el.dataset.type    = job.type;
+        el.dataset.matched = job.is_matched;
+        el.dataset.pinned  = job.pinned;
+        el.dataset.region  = job.region || '경기도 > 평택시';
+        el.dataset.parts   = (job.part||[]).join(',');
+
+        const emojiMap = {'보컬(남)':'🎤','보컬(여)':'🎤','드럼':'🥁','베이스':'🎸','기타':'🎸','키보드':'🎹','그 외':'🔸'};
+        const partsHtml = (job.part||[]).map(p=>`${emojiMap[p]||''}${p}`).join(' / ');
+        const pinHtml = job.pinned
+          ? `<span class="absolute top-1 left-1 text-yellow-500">📌</span>`
+          : '';
+
+        el.innerHTML = `
+          <div class="relative">
+            ${pinHtml}
+            <h2 class="text-lg font-semibold mb-1">
+              ${job.type==='구직' ? `[ ${partsHtml} ]` : `[${job.team||'팀명 미정'}]`}
+              <span class="text-sm text-gray-500 ml-1">
+                (${job.region||'경기도 > 평택시'} / ${job.type==='구직'?'데려가세요!':'모집합니다!'})
+              </span>
+            </h2>
+            <p class="text-sm text-gray-600 mb-2">
+              ${job.type==='구인' ? `<strong>${partsHtml}</strong> 멤버가 필요해요!` : job.intro||''}
+            </p>
+            <div class="expand-content hidden text-sm text-gray-600 mb-2">
+              <p><strong>오픈톡 닉네임:</strong> ${job.nickname||'-'}</p>
+              <p><strong>위치:</strong> ${job.location||'-'}</p>
+              <p><strong>나이:</strong> ${job.age||'-'}</p>
+              ${job.fee?`<p><strong>월 회비:</strong> ${job.fee}</p>`:''}
+              <p><strong>소개:</strong> ${job.intro||'-'}</p>
+            </div>
+            <div class="flex justify-between items-end">
+              <span class="text-xs text-blue-500 cursor-pointer" onclick="App.toggleExpand(this)">&lt;더 보기&gt;</span>
+              <div class="text-right">
+                <p class="text-xs text-gray-400 mb-1">🕒 ${new Date(job.updated_at||job.created_at).toLocaleString()}</p>
+                <button onclick="App.incrementClick(${job.id})" class="text-xs bg-blue-500 text-white px-1.5 py-[9px] rounded">연락처 확인</button>
+                <p class="text-xs text-gray-400 mt-1">👁 <span class="click-count">${job.clicks||0}</span>명이 확인</p>
+              </div>
+            </div>
+            <div class="absolute top-2 right-3">
+              <button class="text-xs text-gray-600 hover:underline" onclick="App.openMatchPopup(${job.id})">매칭상태 변경</button>
+            </div>
+          </div>`;
         container.appendChild(el);
       });
     },
@@ -182,32 +231,32 @@
     async incrementClick(id) {
       const job = this.jobs.find(j=>j.id===id);
       const newCount = (job.clicks||0) + 1;
-      const { error } = await this.supabase
-        .from('jobs').update({ clicks: newCount }).eq('id', id);
-      if (error) return console.error("❌ incrementClick error", error);
+      const { error } = await this.supabase.from('jobs').update({ clicks: newCount }).eq('id', id);
+      if (error) return console.error("❌ incrementClick:", error);
       job.clicks = newCount;
       this.renderPage();
     },
 
     openForm() {
-      console.log("▶️ openForm 호출, supabase =", this.supabase);
+      console.log("▶️ openForm: supabaseClient =", this.supabase);
       import('/static/js/form-popup.js')
         .then(m => m.default(this.supabase))
-        .catch(err => console.error("❌ openForm import error", err));
+        .catch(err => console.error("❌ openForm import:", err));
     },
 
     openMatchPopup(id) {
       import('/static/js/match-popup.js')
         .then(m => m.default(id, this.supabase))
-        .catch(err => console.error("❌ openMatchPopup import error", err));
+        .catch(err => console.error("❌ openMatchPopup import:", err));
     }
   };
 
-  // 전역으로 노출
+  // 전역 노출
   window.App = App;
   // 즉시 초기화
   App.init();
 </script>
+
 
 
   
