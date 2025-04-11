@@ -12,7 +12,7 @@ app.secret_key = os.environ.get("FLASK_SECRET_KEY", "replace-with-your-secret")
 SUPABASE_URL = os.environ["SUPABASE_URL"]
 SUPABASE_KEY = os.environ["SUPABASE_KEY"]
 
-supabase: Client = create_client(https://dmjelqvpcsafottblvwx.supabase.co, eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRtamVscXZwY3NhZm90dGJsdnd4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0NDE5MDM0NywiZXhwIjoyMDU5NzY2MzQ3fQ.YSxZvj9N-8Mkfhyrb7vuQNLGy6hydrOCPmxWKZekuZE)
+supabase: Client = create_client("https://dmjelqvpcsafottblvwx.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRtamVscXZwY3NhZm90dGJsdnd4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0NDE5MDM0NywiZXhwIjoyMDU5NzY2MzQ3fQ.YSxZvj9N-8Mkfhyrb7vuQNLGy6hydrOCPmxWKZekuZE")
 
 # 2) Jinja2용 날짜 포맷 필터
 @app.template_filter('datetimeformat')
