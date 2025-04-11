@@ -1,5 +1,7 @@
 // static/js/match-popup.js
 export default async function openMatchPopup(index, supabase) {
+  console.log("▶️ openMatchPopup 호출:", { index, supabase });
+
   // 1) 비밀번호 입력
   const pw = prompt("비밀번호를 입력하세요");
   if (!pw) return;
@@ -11,17 +13,17 @@ export default async function openMatchPopup(index, supabase) {
     .eq('id', index)
     .single();
   if (fetchError) {
-    console.error(fetchError);
+    console.error("❌ 글 조회 오류:", fetchError);
     return alert("오류 발생: " + fetchError.message);
   }
 
-  // 3) 비밀번호 검증
+  // 3) 비밀번호 검증 (서비스 키 없이 저장된 해시 비교 불가능 → 테스트용 plain 비교)
   if (job.password !== pw) {
     return alert("비밀번호가 일치하지 않습니다.");
   }
 
-  // 4) 매칭 옵션 렌더링
-  const parts        = job.part        || [];
+  // 4) 매칭 옵션 렌더링 준비
+  const parts        = job.part || [];
   const matchedParts = job.matched_parts || [];
   const partOptions  = parts.map(part => `
     <label class="block mb-1">
@@ -37,25 +39,20 @@ export default async function openMatchPopup(index, supabase) {
   popup.style.transform = 'translate(-50%, -50%)';
   popup.innerHTML = `
     <div class="text-right mb-2">
-      <button class="close-btn text-sm text-red-500">✖ 닫기</button>
+      <button id="close-match-btn" class="text-sm text-red-500">✖ 닫기</button>
     </div>
     <form id="match-form">
       <p class="mb-2 text-sm font-semibold">글 수정 및 매칭완료 설정</p>
-
       <input type="text" name="team" value="${job.team||''}"
              placeholder="팀명" class="border p-1 w-full mb-2"/>
-
       <input type="text" name="location" value="${job.location||''}"
              placeholder="위치" class="border p-1 w-full mb-2"/>
-
       <select required name="type" class="border p-1 w-full mb-2">
         <option value="구인" ${job.type==='구인'?'selected':''}>구인</option>
         <option value="구직" ${job.type==='구직'?'selected':''}>구직</option>
       </select>
-
       <input type="text" name="age" value="${job.age||''}"
              placeholder="연령대" class="border p-1 w-full mb-2"/>
-
       <select required name="region" class="border p-1 w-full mb-2">
         <option value="경기도 > 평택시" ${job.region==="경기도 > 평택시"?'selected':''}>경기도 > 평택시</option>
         <option value="경기도 > 오산시" ${job.region==="경기도 > 오산시"?'selected':''}>경기도 > 오산시</option>
@@ -64,19 +61,15 @@ export default async function openMatchPopup(index, supabase) {
         <option value="서울특별시 > 강남구" ${job.region==="서울특별시 > 강남구"?'selected':''}>서울특별시 > 강남구</option>
         <option value="부산광역시 > 해운대구" ${job.region==="부산광역시 > 해운대구"?'selected':''}>부산광역시 > 해운대구</option>
       </select>
-
       <label class="block mb-2">
         <input type="checkbox" name="pinned" value="true"
                ${job.pinned ? "checked" : ""}/>
         상단 고정
       </label>
-
       <textarea name="intro" maxlength="100" placeholder="소개글"
                 class="border p-1 w-full mb-2">${job.intro||''}</textarea>
-
       <p class="mb-1 text-sm">✅ 매칭 완료할 파트를 선택하세요:</p>
       ${partOptions}
-
       <div class="mt-3 text-right">
         <button type="submit" class="bg-green-600 text-white px-3 py-1 rounded">
           저장
@@ -84,15 +77,14 @@ export default async function openMatchPopup(index, supabase) {
       </div>
     </form>
   `;
-
   document.body.appendChild(popup);
 
-  // 6) 닫기 버튼
-  popup.querySelector('.close-btn')
+  // 6) 닫기 버튼 이벤트
+  popup.querySelector('#close-match-btn')
        .addEventListener('click', () => popup.remove());
 
   // 7) 폼 제출 처리
-  popup.querySelector('#match-form').onsubmit = async (e) => {
+  popup.querySelector('#match-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const form = new FormData(e.target);
 
@@ -112,17 +104,21 @@ export default async function openMatchPopup(index, supabase) {
       is_matched:    isMatched
     };
 
-    const { error } = await supabase
+    console.log("🔽 업데이트할 데이터:", updates);
+    const { data, error } = await supabase
       .from('jobs')
       .update(updates)
-      .eq('id', index);
+      .eq('id', index)
+      .select();
+    console.log("🔼 Supabase 응답:", { data, error });
 
     if (error) {
-      console.error(error);
+      console.error("❌ 저장 실패:", error);
       alert("저장 실패: " + error.message);
     } else {
+      console.log("✅ 저장 성공:", data);
       popup.remove();
-      // 메인 스크립트의 Realtime 구독이 자동으로 App.loadJobs()를 호출합니다
+      // Realtime 구독으로 자동 리스트 갱신
     }
-  };
+  });
 }
