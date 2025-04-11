@@ -1,5 +1,6 @@
 // static/js/match-popup.js
-export default async function openMatchPopup(index, supabase) {
+export default async function openMatchPopup(index) {
+  const supabase = window.App.supabase;  // 전역 App.supabase 사용
   console.log("▶️ match-popup 호출:", { index, supabase });
 
   // 1) 비밀번호 입력
@@ -17,7 +18,7 @@ export default async function openMatchPopup(index, supabase) {
     return alert("오류 발생: " + fetchError.message);
   }
 
-  // 3) 비밀번호 검증 (admin1234는 무조건 통과)
+  // 3) 비밀번호 검증 (admin1234 예외 처리)
   const isAdmin = pw === 'admin1234';
   if (!isAdmin && job.password !== pw) {
     return alert("비밀번호가 일치하지 않습니다.");
@@ -83,15 +84,14 @@ export default async function openMatchPopup(index, supabase) {
   `;
   document.body.appendChild(popup);
 
-  // 6) 닫기 버튼
+  // 6) 닫기
   popup.querySelector('#close-match-btn')
        .addEventListener('click', () => popup.remove());
 
-  // 7) 폼 제출 처리
+  // 7) 저장
   popup.querySelector('#match-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const form = new FormData(e.target);
-
     const selected = [...popup.querySelectorAll('input[name="match"]:checked')]
       .map(i => i.value);
     const isMatched = selected.length === parts.length;
