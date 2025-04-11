@@ -266,9 +266,9 @@
           .catch(console.error);
       },
 
-      openMatchPopup(id, supabase) {
+      openMatchPopup(id) {
         import('/static/js/match-popup.js')
-          .then(m=>m.default(id, supabase))
+          .then(m => m.default(id))
           .catch(console.error);
       }
     };
