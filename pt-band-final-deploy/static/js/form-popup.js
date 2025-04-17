@@ -39,6 +39,13 @@ export default function openForm(supabase) {
   popup.querySelector('#new-post-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const form = new FormData(e.target);
+    const password = form.get('password').trim();
+
+    // 비밀번호 유효성 검사
+    if (password.length !== 4) {
+      return alert("비밀번호는 4자리여야 합니다.");
+    }
+
     const payload = {
       type:       form.get('type'),
       team:       form.get('team')     || null,
@@ -49,7 +56,7 @@ export default function openForm(supabase) {
       fee:        form.get('fee')      || null,
       contact:    form.get('contact')  || null,
       intro:      form.get('intro')    || null,
-      password:   form.get('password'),
+      password:   password,
       part:       form.getAll('part'),
       created_at: new Date().toISOString(),
       clicks:     0,
@@ -58,11 +65,11 @@ export default function openForm(supabase) {
     };
 
     console.log("🔽 등록할 데이터:", payload);
-    // .select()를 붙여서 삽입된 행도 함께 받아옵니다
     const { data, error } = await supabase
       .from('jobs')
       .insert([payload])
       .select();
+
     console.log("🔼 Supabase 응답:", { data, error });
 
     if (error) {
@@ -71,7 +78,6 @@ export default function openForm(supabase) {
     } else {
       console.log("✅ 등록 성공, 삽입된 행:", data);
       popup.remove();
-      // Realtime 구독이 자동으로 리스트 갱신됩니다
     }
   });
 
@@ -120,3 +126,4 @@ export default function openForm(supabase) {
     }
   }
 }
+
