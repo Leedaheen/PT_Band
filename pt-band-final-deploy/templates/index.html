@@ -33,17 +33,17 @@
   </div>
 
   <!-- 필터: 타입 + 지역 + 파트 -->
-  <div class="flex mb-4">
+  <div class="flex mb-4 flex-wrap">
     <!-- 타입 필터 -->
-    <div class="flex space-x-1 flex-wrap mb-4 sm:mb-0 w-full sm:w-auto">
-      <button class="filter-btn px-3 py-2 bg-blue-100 hover:bg-blue-300 rounded text-sm w-full sm:w-auto" data-filter="전체">전체</button>
-      <button class="filter-btn px-3 py-2 bg-blue-100 hover:bg-blue-300 rounded text-sm w-full sm:w-auto" data-filter="구인">구인</button>
-      <button class="filter-btn px-3 py-2 bg-blue-100 hover:bg-blue-300 rounded text-sm w-full sm:w-auto" data-filter="구직">구직</button>
-      <button class="filter-btn px-3 py-2 bg-blue-100 hover:bg-blue-300 rounded text-sm w-full sm:w-auto" data-filter="매칭완료">매칭완료</button>
+    <div class="flex space-x-1 mb-4 w-full sm:w-auto">
+      <button class="filter-btn px-3 py-2 bg-gray-200 hover:bg-gray-300 rounded text-sm w-full sm:w-auto" data-filter="전체">전체</button>
+      <button class="filter-btn px-3 py-2 bg-gray-200 hover:bg-gray-300 rounded text-sm w-full sm:w-auto" data-filter="구인">구인</button>
+      <button class="filter-btn px-3 py-2 bg-gray-200 hover:bg-gray-300 rounded text-sm w-full sm:w-auto" data-filter="구직">구직</button>
+      <button class="filter-btn px-3 py-2 bg-gray-200 hover:bg-gray-300 rounded text-sm w-full sm:w-auto" data-filter="매칭완료">매칭완료</button>
     </div>
 
     <!-- 지역 및 파트 필터 -->
-    <div class="flex flex-wrap justify-end w-full sm:w-auto space-x-4">
+    <div class="flex flex-wrap justify-between w-full sm:w-auto space-x-4">
       <select id="regionFilter" class="border p-1 text-sm w-full sm:w-auto">
         <option value="전체">전체</option>
       </select>
