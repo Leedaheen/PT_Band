@@ -1,81 +1,66 @@
-// match-popup.js
+import openForm from '/static/js/form-popup.js';
 
-export default async function openMatchPopup(jobId) {
-  const supabase = App.supabase;
+export default async function openMatchPopup(id) {
+  // 1) 비밀번호 입력
+  const pw = prompt('비밀번호를 입력하세요');
+  if (!pw) return;
 
-  // 비밀번호 입력 모달 생성
-  const modalHtml = `
-    <div id="password-modal" class="fixed top-0 left-0 w-full h-full bg-gray-800 bg-opacity-50 flex justify-center items-center">
-      <div class="bg-white p-6 rounded shadow-lg max-w-sm w-full">
-        <h2 class="text-xl mb-4">비밀번호 입력</h2>
-        <input id="password-input" type="password" placeholder="비밀번호" class="border p-2 w-full mb-4"/>
-        <div class="flex justify-end space-x-2">
-          <button id="cancel-btn" class="bg-gray-500 text-white px-4 py-2 rounded">취소</button>
-          <button id="submit-btn" class="bg-blue-500 text-white px-4 py-2 rounded">확인</button>
-        </div>
-      </div>
+  // 2) 서버에 비밀번호 검증 요청
+  const verifyRes = await fetch(`/verify-password/${id}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password: pw })
+  });
+  const verifyData = await verifyRes.json();
+  if (!verifyRes.ok || !verifyData.success) {
+    return alert(verifyData.message || '비밀번호 검증에 실패했습니다.');
+  }
+
+  // 3) 팝업 UI 생성
+  const job = verifyData.job;
+  const parts = Array.isArray(job.part) ? job.part : [];
+  const matchedParts = Array.isArray(job.matched_parts) ? job.matched_parts : [];
+  const partOptions = parts.map(p => `
+    <label class="block mb-1">
+      <input type="checkbox" name="match" value="${p}"
+             ${matchedParts.includes(p) ? 'checked' : ''}/>
+      ${p}
+    </label>`).join('');
+
+  const popup = document.createElement('div');
+  popup.className = 'fixed top-1/2 left-1/2 bg-white p-4 rounded shadow z-50 max-w-sm w-full max-h-[90%] overflow-auto';
+  popup.style.transform = 'translate(-50%, -50%)';
+  popup.innerHTML = `
+    <div class="text-right mb-2">
+      <button id="close-match-btn" class="text-sm text-red-500">✖ 닫기</button>
     </div>
-  `;
-  
-  document.body.insertAdjacentHTML('beforeend', modalHtml);
+    <form id="match-form">
+      <p class="mb-2 text-sm font-semibold">매칭 상태 변경</p>
+      ${parts.length ? partOptions : '<p>등록된 파트가 없습니다.</p>'}
+      <div class="mt-3 text-right">
+        <button type="submit" class="bg-green-600 text-white px-3 py-1 rounded">저장</button>
+      </div>
+    </form>`;
+  document.body.appendChild(popup);
 
-  // 확인 버튼 클릭 시 비밀번호 검증
-  document.getElementById('submit-btn').addEventListener('click', async () => {
-    const password = document.getElementById('password-input').value;
+  popup.querySelector('#close-match-btn').onclick = () => popup.remove();
 
-    // 비밀번호가 입력되지 않으면 경고 메시지 출력
-    if (!password) {
-      alert('비밀번호를 입력해주세요.');
-      return;
-    }
+  // 4) 저장 처리
+  popup.querySelector('#match-form').onsubmit = async e => {
+    e.preventDefault();
+    const selected = [...popup.querySelectorAll('input[name="match"]:checked')].map(i => i.value);
+    const isMatched = selected.length === parts.length;
 
-    // 해당 작업(구인/구직) 조회
-    const { data: job, error } = await supabase
-      .from('jobs')
-      .select('*')
-      .eq('id', jobId)
-      .single();
-
-    if (error || !job) {
-      alert('잘못된 데이터입니다.');
-      return;
-    }
-
-    // 관리자 비밀번호 확인
-    if (password === 'admin1234') {
-      togglePinStatus(job, jobId);
-    } else {
-      // 일반 사용자 비밀번호 확인
-      if (check_password_hash(job.password, password)) {
-        togglePinStatus(job, jobId);
-      } else {
-        alert("비밀번호가 일치하지 않습니다.");
-      }
-    }
-    
-    // 모달 닫기
-    document.getElementById('password-modal').remove();
-  });
-
-  // 취소 버튼 클릭 시 모달 닫기
-  document.getElementById('cancel-btn').addEventListener('click', () => {
-    document.getElementById('password-modal').remove();
-  });
-}
-
-// 매칭 상태 변경 및 핀 토글
-function togglePinStatus(job, jobId) {
-  const newPinStatus = !job.pinned;
-
-  // Supabase에서 핀 상태 업데이트
-  App.supabase
-    .from('jobs')
-    .update({ pinned: newPinStatus })
-    .eq('id', jobId)
-    .then(() => {
-      alert(`매칭상태 변경 완료! ${newPinStatus ? '상단 고정됨' : '상단 고정 해제됨'}`);
-    })
-    .catch((err) => {
-      alert(`오류 발생: ${err.message}`);
+    const res = await fetch(`/update/${id}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: pw, parts: selected })
     });
+    const result = await res.json();
+    if (!res.ok || !result.success) {
+      alert(result.message || '저장에 실패했습니다.');
+    } else {
+      popup.remove();
+    }
+  };
 }
