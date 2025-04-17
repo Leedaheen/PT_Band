@@ -63,7 +63,7 @@ def add_job():
 
     resp = supabase.from_("jobs")\
         .insert([item])\
-        .execute() 
+        .execute()
     if resp.error:
         return jsonify(success=False, message=resp.error.message), 500
     return jsonify(success=True)
@@ -103,14 +103,8 @@ def verify_password(job_id):
         return jsonify(success=False, message="잘못된 데이터입니다."), 404
     job = resp.data
 
-    # 관리자 비번 (환경변수 ADMIN_PASSWORD) 체크
+    # 관리자 비번 체크 (env ADMIN_PASSWORD)
     if pw == os.environ.get("ADMIN_PASSWORD"):
-        new_pinned = not job.get("pinned", False)
-        supabase.from_("jobs")\
-            .update({"pinned": new_pinned})\
-            .eq("id", job_id)\
-            .execute()
-        job["pinned"] = new_pinned
         return jsonify(success=True, job=job)
 
     # 일반 사용자 비번 체크
@@ -141,18 +135,16 @@ def update(job_id):
 
     parts = req.get("parts", [])
     updates = {
-        "team": req.get("team"),
-        "location": req.get("location"),
-        "type": req.get("type"),
-        "age": req.get("age"),
-        "intro": req.get("intro"),
-        "region": req.get("region"),
-        "updated_at": datetime.datetime.utcnow().isoformat(),
         "matched_parts": parts,
-        "is_matched": len(parts) == len(job.get("part", []))
+        "is_matched": len(parts) == len(job.get("part", [])),
+        "updated_at": datetime.datetime.utcnow().isoformat()
     }
-    if is_admin:
-        updates["pinned"] = req.get("pinned") == "true"
+    # 추가 필드 수정 가능
+    for key in ["team", "location", "type", "age", "region", "intro"]:
+        if key in req:
+            updates[key] = req[key]
+    if is_admin and "pinned" in req:
+        updates["pinned"] = req["pinned"]
 
     upd = supabase.from_("jobs")\
         .update(updates)\
@@ -164,5 +156,4 @@ def update(job_id):
     return jsonify(success=True, message="수정이 완료되었습니다.")
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=True)
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=True)
