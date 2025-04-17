@@ -43,7 +43,7 @@
   </div>
 
   <!-- 파트별 필터 -->
-  <div class="flex mb-4">
+  <div class="flex mb-4 space-x-1 w-full sm:w-auto">
     <button class="part-filter-btn px-3 py-2 bg-blue-100 hover:bg-blue-300 rounded text-sm" data-part="보컬(남)">보컬(남)</button>
     <button class="part-filter-btn px-3 py-2 bg-blue-100 hover:bg-blue-300 rounded text-sm" data-part="보컬(여)">보컬(여)</button>
     <button class="part-filter-btn px-3 py-2 bg-blue-100 hover:bg-blue-300 rounded text-sm" data-part="드럼">드럼</button>
@@ -97,8 +97,8 @@
 
         // 파트 필터
         document.querySelectorAll('.part-filter-btn').forEach(btn =>
-          btn.addEventListener('click', e => {
-            const part = e.currentTarget.dataset.part;
+          btn.addEventListener('click', () => {
+            const part = btn.dataset.part;
             if (this.selectedParts.has(part)) {
               this.selectedParts.delete(part);
               btn.classList.replace('bg-blue-500','bg-blue-100');
@@ -112,11 +112,21 @@
           })
         );
 
-        // 매칭상태 변경 팝업 (이벤트 위임)
+        // 블록 클릭 → 확장/접기
+        document.getElementById('job-list').addEventListener('click', e => {
+          if (e.target.matches('.match-btn')) return;
+          if (e.target.matches('.filter-btn, .part-filter-btn, #open-form-btn')) return;
+          const item = e.target.closest('.job-item');
+          if (!item) return;
+          const content = item.querySelector('.expand-content');
+          if (!content) return;
+          content.classList.toggle('hidden');
+        });
+
+        // 매칭상태 변경
         document.getElementById('job-list').addEventListener('click', e => {
           if (e.target.matches('.match-btn')) {
-            const id = Number(e.target.dataset.id);
-            openMatchPopup(id);
+            openMatchPopup(Number(e.target.dataset.id));
           }
         });
       },
@@ -138,22 +148,21 @@
       },
 
       refreshRegionOptions() {
-        const regions = Array.from(new Set(this.jobs.map(j => j.region || '경기도 > 평택시')));
         const sel = document.getElementById('regionFilter');
-        sel.innerHTML = '<option value="전체">전체</option>' +
-          regions.map(r => `<option>${r}</option>`).join('');
+        sel.innerHTML = '<option>전체</option>' +
+          Array.from(new Set(this.jobs.map(j => j.region || '경기도 > 평택시')))
+            .map(r => `<option>${r}</option>`).join('');
       },
 
       applyFilters() {
         const region = document.getElementById('regionFilter').value;
         this.filteredJobs = this.jobs.filter(job => {
-          let ok = (this.selectedType === '매칭완료') ? job.is_matched
-                   : (this.selectedType === '전체') ? true
-                   : job.type === this.selectedType;
+          let ok = this.selectedType === '전체' ||
+                   (this.selectedType === '매칭완료' ? job.is_matched : job.type === this.selectedType);
           if (ok && region !== '전체') ok = (job.region||'경기도 > 평택시') === region;
           if (ok && this.selectedParts.size) {
             const parts = Array.isArray(job.part) ? job.part : job.part.split(',');
-            ok = [...this.selectedParts].some(p=>parts.includes(p));
+            ok = [...this.selectedParts].some(p => parts.includes(p));
           }
           return ok;
         });
@@ -168,34 +177,26 @@
       },
 
       renderJobs(jobs) {
-        const container = document.getElementById('job-list');
-        container.innerHTML = '';
+        const c = document.getElementById('job-list');
+        c.innerHTML = '';
         jobs.forEach(job => {
           const parts = Array.isArray(job.part) ? job.part : job.part.split(',');
           const partsHtml = parts.join(' / ');
           const pin = job.pinned ? '<span class="absolute top-1 left-1 text-yellow-500">📌</span>' : '';
-          const matchedMsg = job.is_matched
-            ? `<p class="text-sm">${job.type==='구인'
-                ? `${job.team} - ${partsHtml} 모집 완료!`
-                : `${job.nickname} - ${partsHtml} 밴드 합류 완료!`}</p>`
-            : '';
-          const expand = job.is_matched ? ''
-            : `<span class="text-xs text-blue-500 cursor-pointer" onclick="App.toggleExpand(this)">&lt;더 보기&gt;</span>`;
-          const matchBtn = job.is_matched ? ''
-            : `<button class="match-btn text-xs text-gray-600 hover:underline absolute top-2 right-3" data-id="${job.id}">매칭상태 변경</button>`;
+          const matched = job.is_matched
+            ? `<p class="text-sm">${job.type==='구인' ? `${job.team} - ${partsHtml} 모집 완료!` : `${job.nickname} - ${partsHtml} 밴드 합류 완료!`}</p>`
+            : `<p class="text-sm">${job.type==='구인' ? `<strong>${partsHtml}</strong> 멤버가 필요해요!` : job.intro||''}</p>`;
+          const expand = `<span class="text-xs text-blue-500 cursor-pointer">&lt;더 보기&gt;</span>`;
+          const matchBtn = job.is_matched ? '' : `<button class="match-btn text-xs text-gray-600 hover:underline absolute top-2 right-3" data-id="${job.id}">매칭상태 변경</button>`;
 
-          container.insertAdjacentHTML('beforeend', `
-            <div class="bg-white p-4 rounded shadow relative job-item">
+          c.insertAdjacentHTML('beforeend', `
+            <div class="bg-white p-4 rounded shadow relative job-item cursor-pointer">
               ${pin}
               <h2 class="text-lg font-semibold mb-1">
                 ${job.type==='구직' ? `[${partsHtml}]` : `[${job.team||'팀명 미정'}]`}
-                <span class="text-sm text-gray-500 ml-1">
-                  (${job.region||'경기도 > 평택시'} / ${job.type==='구직'?'데려가세요!':'모집합니다!'})
-                </span>
+                <span class="text-sm text-gray-500 ml-1">(${job.region||'경기도 > 평택시'} / ${job.type==='구직'?'데려가세요!':'모집합니다!'})</span>
               </h2>
-              ${ matchedMsg || `<p class="text-sm">${job.type==='구인'
-                ? `<strong>${partsHtml}</strong> 멤버가 필요해요!`
-                : job.intro||''}</p>` }
+              ${matched}
               <div class="expand-content hidden text-sm text-gray-600 mb-2">
                 <p><strong>오픈톡 닉네임:</strong> ${job.nickname||'-'}</p>
                 <p><strong>위치:</strong> ${job.location||'-'}</p>
@@ -208,7 +209,7 @@
                 <a href="tel:${job.contact}" onclick="App.incrementClick(${job.id})" class="inline-block bg-blue-500 text-white px-1.5 py-[2px] rounded">연락처 확인</a>
                 <p>👁 ${job.clicks||0}명 확인</p>
               </div>
-              ${expand}
+              ${expand}<br>
               ${matchBtn}
             </div>
           `);
@@ -216,19 +217,10 @@
       },
 
       renderPagination() {
-        const total = Math.ceil(this.filteredJobs.length / this.pageSize);
-        const pager = document.getElementById('pagination');
-        pager.innerHTML = '';
-        for (let i=1; i<=total; i++) {
-          const cls = i===this.currentPage ? 'bg-blue-600 text-white' : 'bg-white';
-          pager.insertAdjacentHTML('beforeend', `<button class="px-3 py-1 border rounded ${cls}">${i}</button>`);
-        }
-        pager.querySelectorAll('button').forEach((b, idx)=> {
-          b.addEventListener('click', ()=> {
-            this.currentPage = idx+1;
-            this.renderPage();
-          });
-        });
+        const total = Math.ceil(this.filteredJobs.length/this.pageSize);
+        const p = document.getElementById('pagination'); p.innerHTML='';
+        for(let i=1;i<=total;i++) p.insertAdjacentHTML('beforeend', `<button class="px-3 py-1 border rounded ${i===this.currentPage?'bg-blue-600 text-white':'bg-white'}">${i}</button>`);
+        p.querySelectorAll('button').forEach((b,i)=>b.addEventListener('click',()=>{this.currentPage=i+1;this.renderPage()}));
       },
 
       updateActiveFilter(btn) {
@@ -236,19 +228,11 @@
         btn.classList.add('active');
       },
 
-      toggleExpand(el) {
-        const cont = el.closest('.job-item').querySelector('.expand-content');
-        cont.classList.toggle('hidden');
-        el.textContent = cont.classList.contains('hidden') ? '<더 보기>' : '<접기>';
-      },
-
       incrementClick(id) {
-        this.supabase.from('jobs').update({ clicks: supabase.postgrest.raw('clicks+1') }).eq('id', id).then(()=> this.loadJobs());
+        this.supabase.from('jobs').update({clicks: supabase.postgrest.raw('clicks+1')}).eq('id',id).then(()=>this.loadJobs());
       }
     };
-
-    window.App = App;
-    App.init();
+    window.App = App; App.init();
   </script>
 </body>
 </html>
