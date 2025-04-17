@@ -4,17 +4,17 @@ import datetime
 from flask import Flask, render_template, request, jsonify, session
 from werkzeug.security import generate_password_hash, check_password_hash
 from supabase import create_client, Client
- 
+
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "replace-with-your-secret")
 
-# 1) Supabase 클라이언트 초기화
+# Supabase 클라이언트 초기화
 SUPABASE_URL = os.environ["SUPABASE_URL"]
 SUPABASE_KEY = os.environ["SUPABASE_SERVICE_KEY"]
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# 2) Jinja2용 날짜 포맷 필터
+# Jinja2용 날짜 포맷 필터
 @app.template_filter('datetimeformat')
 def format_datetime(value, format='%Y-%m-%d %H:%M'):
     try:
@@ -26,7 +26,7 @@ def format_datetime(value, format='%Y-%m-%d %H:%M'):
     except Exception:
         return value
 
-# 3) 메인 페이지: jobs 테이블 조회
+# 메인 페이지: jobs 테이블 조회
 @app.route("/")
 def index():
     resp = supabase.from_("jobs")\
@@ -44,7 +44,7 @@ def index():
                            types=types,
                            parts=parts)
 
-# 4) 새 글 등록
+# 새 글 등록
 @app.route("/add", methods=["POST"])
 def add_job():
     item = request.get_json()
@@ -63,12 +63,12 @@ def add_job():
 
     resp = supabase.from_("jobs")\
         .insert([item])\
-        .execute()  # :contentReference[oaicite:1]{index=1}
+        .execute() 
     if resp.error:
         return jsonify(success=False, message=resp.error.message), 500
     return jsonify(success=True)
 
-# 5) 연락처 클릭(조회수 증가)
+# 연락처 클릭(조회수 증가)
 @app.route("/click/<int:job_id>", methods=["POST"])
 def click(job_id):
     clicked = session.setdefault('clicked', [])
@@ -87,7 +87,7 @@ def click(job_id):
     session['clicked'] = clicked
     return jsonify(success=True)
 
-# 6) 비밀번호 검증 및 관리자 핀 토글
+# 비밀번호 검증 및 관리자 핀 토글
 @app.route("/verify-password/<int:job_id>", methods=["POST"])
 def verify_password(job_id):
     req = request.get_json()
@@ -119,7 +119,7 @@ def verify_password(job_id):
 
     return jsonify(success=False, message="비밀번호가 일치하지 않습니다."), 403
 
-# 7) 글 수정 및 매칭 상태 업데이트
+# 글 수정 및 매칭 상태 업데이트
 @app.route("/update/<int:job_id>", methods=["POST"])
 def update(job_id):
     req = request.get_json()
