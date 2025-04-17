@@ -6,6 +6,12 @@
   <title>구인/구직 게시판</title>
   <link rel="icon" href="/static/favicon.ico"/>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet"/>
+
+  <!-- Supabase 환경 변수 -->
+  <script>
+    const SUPABASE_URL  = 'https://dmjelqvpcsafottblvwx.supabase.co';
+    const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRtamVscXZwY3NhZm90dGJsdnd4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQxOTAzNDcsImV4cCI6MjA1OTc2NjM0N30.Z8NfPAVbUz7BIi9ifS9bdVFXUYj6dgu00pwP6THNA8A';
+  </script>
 </head>
 <body class="bg-gray-100 p-4">
   <!-- 헤더 -->
@@ -26,20 +32,18 @@
   </div>
 
   <!-- 필터: 타입 + 지역 -->
-  <div class="flex flex-wrap items-center mb-4 space-x-4">
-    <!-- 타입 필터 -->
-    <div class="flex space-x-1 w-full sm:w-auto">
+  <div class="flex justify-between items-center mb-4">
+    <!-- 왼쪽: 타입 필터 -->
+    <div class="flex space-x-2">
       <button class="filter-btn px-3 py-2 bg-gray-200 hover:bg-gray-300 rounded text-sm" data-filter="전체">전체</button>
       <button class="filter-btn px-3 py-2 bg-gray-200 hover:bg-gray-300 rounded text-sm" data-filter="구인">구인</button>
       <button class="filter-btn px-3 py-2 bg-gray-200 hover:bg-gray-300 rounded text-sm" data-filter="구직">구직</button>
       <button class="filter-btn px-3 py-2 bg-gray-200 hover:bg-gray-300 rounded text-sm" data-filter="매칭완료">매칭완료</button>
     </div>
-    <!-- 지역 필터 -->
-    <div class="flex justify-end w-full sm:w-auto">
-      <select id="regionFilter" class="border p-1 text-sm h-10">
-        <option value="전체">전체</option>
-      </select>
-    </div>
+    <!-- 오른쪽: 지역 필터 -->
+    <select id="regionFilter" class="border p-1 text-sm h-10 w-[150%]">
+      <option value="전체">전체</option>
+    </select>
   </div>
 
   <!-- 파트별 필터 -->
@@ -115,7 +119,7 @@
         // 블록 클릭 → 확장/접기
         document.getElementById('job-list').addEventListener('click', e => {
           if (e.target.matches('.match-btn')) return;
-          if (e.target.matches('.filter-btn, .part-filter-btn, #open-form-btn')) return;
+          if (e.target.closest('.filter-btn, .part-filter-btn, #open-form-btn')) return;
           const item = e.target.closest('.job-item');
           if (!item) return;
           const content = item.querySelector('.expand-content');
