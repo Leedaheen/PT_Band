@@ -35,20 +35,20 @@
   <!-- 필터: 타입 + 지역 -->
   <div class="flex justify-between items-center mb-4">
     <div class="flex space-x-1">
-      <button class="filter-btn px-2 py-1 bg-gray-200 hover:bg-gray-300 rounded text-sm" data-filter="전체">전체</button>
-      <button class="filter-btn px-2 py-1 bg-gray-200 hover:bg-gray-300 rounded text-sm" data-filter="구인">구인</button>
-      <button class="filter-btn px-2 py-1 bg-gray-200 hover:bg-gray-300 rounded text-sm" data-filter="구직">구직</button>
-      <button class="filter-btn px-2 py-1 bg-gray-200 hover:bg-gray-300 rounded text-sm" data-filter="매칭완료">매칭완료</button>
+      <button class="filter-btn px-3 py-2 bg-gray-200 hover:bg-gray-300 rounded text-sm w-full sm:w-auto" data-filter="전체">전체</button>
+      <button class="filter-btn px-3 py-2 bg-gray-200 hover:bg-gray-300 rounded text-sm w-full sm:w-auto" data-filter="구인">구인</button>
+      <button class="filter-btn px-3 py-2 bg-gray-200 hover:bg-gray-300 rounded text-sm w-full sm:w-auto" data-filter="구직">구직</button>
+      <button class="filter-btn px-3 py-2 bg-gray-200 hover:bg-gray-300 rounded text-sm w-full sm:w-auto" data-filter="매칭완료">매칭완료</button>
     </div>
-    <select id="regionFilter" class="border p-1 text-sm">
+    <select id="regionFilter" class="border p-1 text-sm w-full sm:w-auto">
       <option value="전체">전체</option>
     </select>
   </div>
 
   <!-- 파트 필터 -->
-  <div class="flex items-center mb-6">
-    <label class="text-sm mr-2">파트 :</label>
-    <div class="flex flex-wrap gap-2">
+  <div class="flex flex-wrap items-center mb-6">
+    <label class="text-sm mr-2 w-full sm:w-auto">파트 :</label>
+    <div class="flex flex-wrap gap-2 w-full sm:w-auto">
       <label><input type="checkbox" class="part-filter" value="보컬(남)"/>보컬(남)</label>
       <label><input type="checkbox" class="part-filter" value="보컬(여)"/>보컬(여)</label>
       <label><input type="checkbox" class="part-filter" value="드럼"/>드럼</label>
@@ -119,17 +119,17 @@
         this.jobs = data;
 
         // 지역 필터 옵션 갱신
-        const regions = Array.from(new Set(this.jobs.map(j=>j.region||'경기도 > 평택시')));
+        const regions = Array.from(new Set(this.jobs.map(j => j.region || '경기도 > 평택시')));
         const regionSel = document.getElementById('regionFilter');
         regionSel.innerHTML = '<option value="전체">전체</option>' +
-          regions.map(r=>`<option value="${r}">${r}</option>`).join('');
+          regions.map(r => `<option value="${r}">${r}</option>`).join('');
 
         this.applyFilters();
       },
 
       applyFilters() {
         const region = document.getElementById('regionFilter').value;
-        const parts  = [...document.querySelectorAll('.part-filter:checked')].map(c=>c.value);
+        const parts  = [...document.querySelectorAll('.part-filter:checked')].map(c => c.value);
 
         this.filteredJobs = this.jobs.filter(job => {
           let ok = true;
@@ -225,33 +225,6 @@
         }
       },
 
-      toggleExpand(el) {
-        const content = el.closest('.job-item').querySelector('.expand-content');
-        content.classList.toggle('hidden');
-        el.textContent = content.classList.contains('hidden') ? '<더 보기>' : '<접기>';
-      },
-
-      async incrementClick(id) {
-        const job = this.jobs.find(j => j.id === id);
-        const newCount = (job.clicks || 0) + 1;
-        const { error } = await this.supabase.from('jobs').update({ clicks: newCount }).eq('id', id);
-        if (error) return console.error("❌ incrementClick 오류:", error);
-        job.clicks = newCount;
-        this.renderPage();
-      },
-
-      openForm() {
-        import('/static/js/form-popup.js')
-          .then(m => m.default(this.supabase))
-          .catch(console.error);
-      },
-
-      openMatchPopup(id) {
-        import('/static/js/match-popup.js')
-          .then(m => m.default(id))
-          .catch(console.error);
-      },
-
       updateActiveFilter(btn) {
         document.querySelectorAll('.filter-btn').forEach(button => {
           button.classList.remove('active');
@@ -271,5 +244,6 @@
          alt="Kakao Open Chat" class="w-6 h-6 mr-2"/>
     <span class="text-sm font-medium">오픈톡 바로가기</span>
   </a>
+
 </body>
 </html>
