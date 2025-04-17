@@ -36,10 +36,10 @@
   <div class="flex mb-4">
     <!-- 타입 필터 -->
     <div class="flex space-x-1 flex-wrap mb-4 sm:mb-0 w-full sm:w-auto">
-      <button class="filter-btn px-3 py-2 bg-gray-200 hover:bg-gray-300 rounded text-sm w-full sm:w-auto" data-filter="전체">전체</button>
-      <button class="filter-btn px-3 py-2 bg-gray-200 hover:bg-gray-300 rounded text-sm w-full sm:w-auto" data-filter="구인">구인</button>
-      <button class="filter-btn px-3 py-2 bg-gray-200 hover:bg-gray-300 rounded text-sm w-full sm:w-auto" data-filter="구직">구직</button>
-      <button class="filter-btn px-3 py-2 bg-gray-200 hover:bg-gray-300 rounded text-sm w-full sm:w-auto" data-filter="매칭완료">매칭완료</button>
+      <button class="filter-btn px-3 py-2 bg-blue-100 hover:bg-blue-300 rounded text-sm w-full sm:w-auto" data-filter="전체">전체</button>
+      <button class="filter-btn px-3 py-2 bg-blue-100 hover:bg-blue-300 rounded text-sm w-full sm:w-auto" data-filter="구인">구인</button>
+      <button class="filter-btn px-3 py-2 bg-blue-100 hover:bg-blue-300 rounded text-sm w-full sm:w-auto" data-filter="구직">구직</button>
+      <button class="filter-btn px-3 py-2 bg-blue-100 hover:bg-blue-300 rounded text-sm w-full sm:w-auto" data-filter="매칭완료">매칭완료</button>
     </div>
 
     <!-- 지역 및 파트 필터 -->
@@ -49,13 +49,13 @@
       </select>
 
       <div class="flex flex-wrap gap-2 w-full sm:w-auto">
-        <label><input type="checkbox" class="part-filter" value="보컬(남)"/>보컬(남)</label>
-        <label><input type="checkbox" class="part-filter" value="보컬(여)"/>보컬(여)</label>
-        <label><input type="checkbox" class="part-filter" value="드럼"/>드럼</label>
-        <label><input type="checkbox" class="part-filter" value="베이스"/>베이스</label>
-        <label><input type="checkbox" class="part-filter" value="기타"/>기타</label>
-        <label><input type="checkbox" class="part-filter" value="키보드"/>키보드</label>
-        <label><input type="checkbox" class="part-filter" value="그 외"/>그 외</label>
+        <button class="part-filter-btn px-4 py-2 bg-blue-100 hover:bg-blue-300 rounded text-sm" data-part="보컬(남)">보컬(남)</button>
+        <button class="part-filter-btn px-4 py-2 bg-blue-100 hover:bg-blue-300 rounded text-sm" data-part="보컬(여)">보컬(여)</button>
+        <button class="part-filter-btn px-4 py-2 bg-blue-100 hover:bg-blue-300 rounded text-sm" data-part="드럼">드럼</button>
+        <button class="part-filter-btn px-4 py-2 bg-blue-100 hover:bg-blue-300 rounded text-sm" data-part="베이스">베이스</button>
+        <button class="part-filter-btn px-4 py-2 bg-blue-100 hover:bg-blue-300 rounded text-sm" data-part="기타">기타</button>
+        <button class="part-filter-btn px-4 py-2 bg-blue-100 hover:bg-blue-300 rounded text-sm" data-part="키보드">키보드</button>
+        <button class="part-filter-btn px-4 py-2 bg-blue-100 hover:bg-blue-300 rounded text-sm" data-part="그 외">그 외</button>
       </div>
     </div>
   </div>
@@ -76,6 +76,7 @@
       pageSize: 10,
       currentPage: 1,
       selectedType: '전체',
+      selectedParts: new Set(), // 선택된 파트 필터링
 
       init() {
         console.log("✅ App.init: Supabase 준비됨", this.supabase);
@@ -98,9 +99,21 @@
         document.getElementById('regionFilter')
           .addEventListener('change', () => this.applyFilters());
 
-        // 파트 필터
-        document.querySelectorAll('.part-filter')
-          .forEach(chk => chk.addEventListener('change', () => this.applyFilters()));
+        // 파트별 필터링 버튼 클릭 처리
+        document.querySelectorAll('.part-filter-btn')
+          .forEach(btn => btn.addEventListener('click', (e) => {
+            const part = e.target.getAttribute('data-part');
+            if (this.selectedParts.has(part)) {
+              this.selectedParts.delete(part);
+              e.target.classList.remove('bg-blue-500', 'text-white');
+              e.target.classList.add('bg-blue-100', 'text-black');
+            } else {
+              this.selectedParts.add(part);
+              e.target.classList.remove('bg-blue-100', 'text-black');
+              e.target.classList.add('bg-blue-500', 'text-white');
+            }
+            this.applyFilters();
+          }));
       },
 
       initRealtime() {
@@ -130,7 +143,6 @@
 
       applyFilters() {
         const region = document.getElementById('regionFilter').value;
-        const parts  = [...document.querySelectorAll('.part-filter:checked')].map(c => c.value);
 
         this.filteredJobs = this.jobs.filter(job => {
           let ok = true;
@@ -138,14 +150,14 @@
           else if (this.selectedType !== '전체') ok = job.type === this.selectedType;
           if (ok && region !== '전체') ok = (job.region || '경기도 > 평택시') === region;
 
-          if (ok && parts.length) {
+          if (ok && this.selectedParts.size > 0) {
             let arr = [];
             if (Array.isArray(job.part)) arr = job.part;
             else if (typeof job.part === 'string') {
               try { arr = JSON.parse(job.part); }
               catch { arr = job.part.split(','); }
             }
-            ok = parts.some(p => arr.includes(p));
+            ok = [...this.selectedParts].some(p => arr.includes(p));
           }
           return ok;
         });
@@ -201,10 +213,10 @@
               </div>
               <div class="flex justify-between items-end">
                 <span class="text-xs text-blue-500 cursor-pointer" onclick="App.toggleExpand(this)">&lt;더 보기&gt;</span>
-                <div class="text-right">
-                  <p class="text-xs text-gray-400 mb-1">🕒 ${new Date(job.updated_at || job.created_at).toLocaleString()}</p>
+                <div class="text-right flex flex-col text-xs text-gray-400 mt-1">
+                  <p>🕒 ${new Date(job.updated_at || job.created_at).toLocaleString()}</p>
                   <a href="tel:${job.contact}" onclick="App.incrementClick(${job.id})" class="text-xs bg-blue-500 text-white px-1.5 py-[9px] rounded inline-block">연락처 확인</a>
-                  <p class="text-xs text-gray-400 mt-1">👁 <span class="click-count">${job.clicks || 0}</span>명이 확인</p>
+                  <p>👁 <span class="click-count">${job.clicks || 0}</span>명이 확인</p>
                 </div>
               </div>
               <div class="absolute top-2 right-3">
@@ -236,6 +248,12 @@
           button.classList.remove('active');
         });
         btn.classList.add('active');
+      },
+
+      toggleExpand(el) {
+        const content = el.closest('.job-item').querySelector('.expand-content');
+        content.classList.toggle('hidden');
+        el.textContent = content.classList.contains('hidden') ? '<더 보기>' : '<접기>';
       }
     };
 
