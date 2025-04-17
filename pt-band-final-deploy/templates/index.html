@@ -186,7 +186,7 @@
 
           const pinHtml = job.pinned ? `<span class="absolute top-1 left-1 text-yellow-500">📌</span>` : '';
           const isMatchedMessage = job.is_matched
-            ? (job.type === '구인' ? `${job.team} - ${partsHtml} 모집 완료!` : `${job.nickname} ${partsHtml} 밴드 합류 완료!`)
+            ? (job.type === '구인' ? `${job.team} - ${partsHtml} 모집 완료!` : `${job.nickname} - ${partsHtml} 밴드 합류 완료!`)
             : '';
 
           const el = document.createElement('div');
@@ -207,24 +207,6 @@
               <p class="text-sm text-gray-600 mb-2">
                 ${job.is_matched ? isMatchedMessage : (job.type === '구인' ? `<strong>${partsHtml}</strong> 멤버가 필요해요!` : job.intro || '')}
               </p>
-              <div class="expand-content hidden text-sm text-gray-600 mb-2">
-                <p><strong>오픈톡 닉네임:</strong> ${job.nickname || '-'}</p>
-                <p><strong>위치:</strong> ${job.location || '-'}</p>
-                <p><strong>나이:</strong> ${job.age || '-'}</p>
-                ${job.fee ? `<p><strong>월 회비:</strong> ${job.fee}</p>` : ''}
-                <p><strong>소개:</strong> ${job.intro || '-'}</p>
-              </div>
-              <div class="flex justify-between items-end">
-                <span class="text-xs text-blue-500 cursor-pointer" onclick="App.toggleExpand(this)">&lt;더 보기&gt;</span>
-                <div class="text-right flex flex-col text-xs text-gray-400 mt-1">
-                  <p>🕒 ${new Date(job.updated_at || job.created_at).toLocaleString()}</p>
-                  <a href="tel:${job.contact}" onclick="App.incrementClick(${job.id})" class="text-xs bg-blue-500 text-white px-1.5 py-[9px] rounded inline-block">연락처 확인</a>
-                  <p>👁 <span class="click-count">${job.clicks || 0}</span>명이 확인</p>
-                </div>
-              </div>
-              <div class="absolute top-2 right-3">
-                <button class="text-xs text-gray-600 hover:underline" onclick="App.openMatchPopup(${job.id})">매칭상태 변경</button>
-              </div>
             </div>`;
           container.appendChild(el);
         });
@@ -251,12 +233,6 @@
           button.classList.remove('active');
         });
         btn.classList.add('active');
-      },
-
-      toggleExpand(el) {
-        const content = el.closest('.job-item').querySelector('.expand-content');
-        content.classList.toggle('hidden');
-        el.textContent = content.classList.contains('hidden') ? '<더 보기>' : '<접기>';
       }
     };
 
