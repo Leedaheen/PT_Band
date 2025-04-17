@@ -32,35 +32,36 @@
     </span>
   </div>
 
-  <!-- 필터: 타입 + 지역 -->
-  <div class="flex justify-between items-center mb-4">
-    <div class="flex space-x-1">
+  <!-- 필터: 타입 + 지역 + 파트 -->
+  <div class="flex mb-4">
+    <!-- 타입 필터 -->
+    <div class="flex space-x-1 flex-wrap mb-4 sm:mb-0 w-full sm:w-auto">
       <button class="filter-btn px-3 py-2 bg-gray-200 hover:bg-gray-300 rounded text-sm w-full sm:w-auto" data-filter="전체">전체</button>
       <button class="filter-btn px-3 py-2 bg-gray-200 hover:bg-gray-300 rounded text-sm w-full sm:w-auto" data-filter="구인">구인</button>
       <button class="filter-btn px-3 py-2 bg-gray-200 hover:bg-gray-300 rounded text-sm w-full sm:w-auto" data-filter="구직">구직</button>
       <button class="filter-btn px-3 py-2 bg-gray-200 hover:bg-gray-300 rounded text-sm w-full sm:w-auto" data-filter="매칭완료">매칭완료</button>
     </div>
-    <select id="regionFilter" class="border p-1 text-sm w-full sm:w-auto">
-      <option value="전체">전체</option>
-    </select>
-  </div>
 
-  <!-- 파트 필터 -->
-  <div class="flex flex-wrap items-center mb-6">
-    <label class="text-sm mr-2 w-full sm:w-auto">파트 :</label>
-    <div class="flex flex-wrap gap-2 w-full sm:w-auto">
-      <label><input type="checkbox" class="part-filter" value="보컬(남)"/>보컬(남)</label>
-      <label><input type="checkbox" class="part-filter" value="보컬(여)"/>보컬(여)</label>
-      <label><input type="checkbox" class="part-filter" value="드럼"/>드럼</label>
-      <label><input type="checkbox" class="part-filter" value="베이스"/>베이스</label>
-      <label><input type="checkbox" class="part-filter" value="기타"/>기타</label>
-      <label><input type="checkbox" class="part-filter" value="키보드"/>키보드</label>
-      <label><input type="checkbox" class="part-filter" value="그 외"/>그 외</label>
+    <!-- 지역 및 파트 필터 -->
+    <div class="flex flex-wrap justify-end w-full sm:w-auto space-x-4">
+      <select id="regionFilter" class="border p-1 text-sm w-full sm:w-auto">
+        <option value="전체">전체</option>
+      </select>
+
+      <div class="flex flex-wrap gap-2 w-full sm:w-auto">
+        <label><input type="checkbox" class="part-filter" value="보컬(남)"/>보컬(남)</label>
+        <label><input type="checkbox" class="part-filter" value="보컬(여)"/>보컬(여)</label>
+        <label><input type="checkbox" class="part-filter" value="드럼"/>드럼</label>
+        <label><input type="checkbox" class="part-filter" value="베이스"/>베이스</label>
+        <label><input type="checkbox" class="part-filter" value="기타"/>기타</label>
+        <label><input type="checkbox" class="part-filter" value="키보드"/>키보드</label>
+        <label><input type="checkbox" class="part-filter" value="그 외"/>그 외</label>
+      </div>
     </div>
   </div>
 
   <!-- 리스트 + 페이징 -->
-  <div id="job-list" class="space-y-6"></div>
+  <div id="job-list" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-4"></div>
   <div id="pagination" class="mt-4 flex justify-center items-center space-x-2"></div>
 
   <!-- ESM 모듈 스크립트 -->
@@ -169,6 +170,9 @@
           const partsHtml = partsArray.map(p => `${emojiMap[p] || ''}${p}`).join(' / ');
 
           const pinHtml = job.pinned ? `<span class="absolute top-1 left-1 text-yellow-500">📌</span>` : '';
+          const isMatchedMessage = job.is_matched
+            ? (job.type === '구인' ? `${job.team} - ${partsHtml} 모집 완료!` : `${job.nickname} ${partsHtml} 밴드 합류 완료!`)
+            : '';
 
           const el = document.createElement('div');
           el.className = 'bg-white p-4 rounded shadow relative job-item';
@@ -185,7 +189,9 @@
                 ${job.type === '구직' ? `[ ${partsHtml} ]` : `[${job.team || '팀명 미정'}]`}
                 <span class="text-sm text-gray-500 ml-1">(${job.region || '경기도 > 평택시'} / ${job.type === '구직' ? '데려가세요!' : '모집합니다!'})</span>
               </h2>
-              <p class="text-sm text-gray-600 mb-2">${job.type === '구인' ? `<strong>${partsHtml}</strong> 멤버가 필요해요!` : job.intro || ''}</p>
+              <p class="text-sm text-gray-600 mb-2">
+                ${job.is_matched ? isMatchedMessage : (job.type === '구인' ? `<strong>${partsHtml}</strong> 멤버가 필요해요!` : job.intro || '')}
+              </p>
               <div class="expand-content hidden text-sm text-gray-600 mb-2">
                 <p><strong>오픈톡 닉네임:</strong> ${job.nickname || '-'}</p>
                 <p><strong>위치:</strong> ${job.location || '-'}</p>
