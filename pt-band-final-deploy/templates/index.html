@@ -175,42 +175,72 @@
         this.renderJobs(this.filteredJobs.slice(start, start + this.pageSize));
       },
 
-      renderJobs(jobs) {
-        const container = document.getElementById('job-list');
-        container.innerHTML = '';
+renderJobs(jobs) {
+  const container = document.getElementById('job-list');
+  container.innerHTML = '';
 
-        jobs.forEach(job => {
-          const partsArray = Array.isArray(job.part) ? job.part : job.part.split(',');
-          const emojiMap = {'보컬(남)':'🎤','보컬(여)':'🎤','드럼':'🥁','베이스':'🎸','기타':'🎸','키보드':'🎹','그 외':'🔸'};
-          const partsHtml = partsArray.map(p => `${emojiMap[p] || ''}${p}`).join(' / ');
+  jobs.forEach(job => {
+    const partsArray = Array.isArray(job.part) ? job.part : job.part.split(',');
+    const emojiMap = {'보컬(남)':'🎤','보컬(여)':'🎤','드럼':'🥁','베이스':'🎸','기타':'🎸','키보드':'🎹','그 외':'🔸'};
+    const partsHtml = partsArray.map(p => `${emojiMap[p] || ''}${p}`).join(' / ');
 
-          const pinHtml = job.pinned ? `<span class="absolute top-1 left-1 text-yellow-500">📌</span>` : '';
-          const isMatchedMessage = job.is_matched
-            ? (job.type === '구인' ? `${job.team} - ${partsHtml} 모집 완료!` : `${job.nickname} - ${partsHtml} 밴드 합류 완료!`)
-            : '';
+    const pinHtml = job.pinned ? `<span class="absolute top-1 left-1 text-yellow-500">📌</span>` : '';
 
-          const el = document.createElement('div');
-          el.className = 'bg-white p-4 rounded shadow relative job-item';
-          el.dataset.id = job.id;
-          el.dataset.type = job.type;
-          el.dataset.matched = job.is_matched;
-          el.dataset.pinned = job.pinned;
-          el.dataset.region = job.region || '경기도 > 평택시';
+    // 매칭완료 상태일 때만 보여주는 메시지
+    const isMatchedMessage = job.is_matched
+      ? (job.type === '구인' ? `${job.team} - ${partsHtml} 모집 완료!` : `${job.nickname} - ${partsHtml} 밴드 합류 완료!`)
+      : '';
 
-          el.innerHTML = `
-            <div class="relative">
-              ${pinHtml}
-              <h2 class="text-lg font-semibold mb-1">
-                ${job.type === '구직' ? `[ ${partsHtml} ]` : `[${job.team || '팀명 미정'}]`}
-                <span class="text-sm text-gray-500 ml-1">(${job.region || '경기도 > 평택시'} / ${job.type === '구직' ? '데려가세요!' : '모집합니다!'})</span>
-              </h2>
-              <p class="text-sm text-gray-600 mb-2">
-                ${job.is_matched ? isMatchedMessage : (job.type === '구인' ? `<strong>${partsHtml}</strong> 멤버가 필요해요!` : job.intro || '')}
-              </p>
-            </div>`;
-          container.appendChild(el);
-        });
-      },
+    const el = document.createElement('div');
+    el.className = 'bg-white p-4 rounded shadow relative job-item';
+    el.dataset.id = job.id;
+    el.dataset.type = job.type;
+    el.dataset.matched = job.is_matched;
+    el.dataset.pinned = job.pinned;
+    el.dataset.region = job.region || '경기도 > 평택시';
+
+    // 매칭완료된 글의 경우 정보 숨김 처리
+    const jobContent = job.is_matched
+      ? `
+          <h2 class="text-lg font-semibold mb-1">
+            ${job.type === '구직' ? `[ ${partsHtml} ]` : `[${job.team || '팀명 미정'}]`}
+            <span class="text-sm text-gray-500 ml-1">(${job.region || '경기도 > 평택시'} / ${job.type === '구직' ? '데려가세요!' : '모집합니다!'})</span>
+          </h2>
+          <p class="text-sm text-gray-600 mb-2">
+            ${isMatchedMessage}
+          </p>
+        `
+      : `
+          <h2 class="text-lg font-semibold mb-1">
+            ${job.type === '구직' ? `[ ${partsHtml} ]` : `[${job.team || '팀명 미정'}]`}
+            <span class="text-sm text-gray-500 ml-1">(${job.region || '경기도 > 평택시'} / ${job.type === '구직' ? '데려가세요!' : '모집합니다!'})</span>
+          </h2>
+          <p class="text-sm text-gray-600 mb-2">
+            ${job.type === '구인' ? `<strong>${partsHtml}</strong> 멤버가 필요해요!` : job.intro || ''}
+          </p>
+          <div class="expand-content hidden text-sm text-gray-600 mb-2">
+            <p><strong>오픈톡 닉네임:</strong> ${job.nickname || '-'}</p>
+            <p><strong>위치:</strong> ${job.location || '-'}</p>
+            <p><strong>나이:</strong> ${job.age || '-'}</p>
+            ${job.fee ? `<p><strong>월 회비:</strong> ${job.fee}</p>` : ''}
+            <p><strong>소개:</strong> ${job.intro || '-'}</p>
+          </div>
+        `;
+
+    el.innerHTML = `
+      <div class="relative">
+        ${pinHtml}
+        ${jobContent}
+        <div class="flex justify-between items-end">
+          <span class="text-xs text-blue-500 cursor-pointer" onclick="App.toggleExpand(this)">&lt;더 보기&gt;</span>
+        </div>
+      </div>
+    `;
+
+    container.appendChild(el);
+  });
+}
+
 
       renderPagination() {
         const total = Math.ceil(this.filteredJobs.length / this.pageSize);
