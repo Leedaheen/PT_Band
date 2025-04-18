@@ -11,18 +11,8 @@ app.secret_key = os.environ.get("FLASK_SECRET_KEY", "replace-with-your-secret")
 SUPABASE_URL = os.environ["SUPABASE_URL"]
 SUPABASE_KEY = os.environ["SUPABASE_SERVICE_KEY"]
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
-
-# Jinja2용 날짜 포맷 필터
-@app.template_filter('datetimeformat')
-def format_datetime(value, format='%Y-%m-%d %H:%M'):
-    try:
-        if isinstance(value, str):
-            value = datetime.datetime.fromisoformat(value)
-        elif isinstance(value, (int, float)):
-            value = datetime.datetime.fromtimestamp(value)
-        return value.strftime(format)
-    except Exception:
-        return value
+# 관리자 암호 (환경변수로 지정하거나 기본값 'admin1234')
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "admin1234")
 
 # 메인 페이지: jobs 조회
 @app.route("/")
