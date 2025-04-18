@@ -42,6 +42,29 @@ export default function openMatchPopup(jobId) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password })
       });
+      let data;
+      try {
+        data = await res.json();
+      } catch (parseErr) {
+        console.error('JSON parse error:', parseErr);
+        alert('서버 응답을 처리하는 중 오류가 발생했습니다.');
+        removeModal();
+        return;
+      }
+      if (!res.ok) {
+        alert(data.message || '비밀번호 검증 실패');
+        removeModal();
+        return;
+      }
+      // 검증 성공
+      removeModal();
+      openMatchForm(data.job, password);
+    } catch (err) {
+      console.error('Fetch error:', err);
+      alert('비밀번호 검증 중 네트워크 오류가 발생했습니다.');
+      removeModal();
+    }
+  });
       const text = await res.text();
       let data;
       try {
