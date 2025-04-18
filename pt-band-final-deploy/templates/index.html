@@ -2,21 +2,19 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>구인/구직 게시판</title>
-  <link rel="icon" href="/static/favicon.ico"/>
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet"/>
+  <link rel="icon" href="/static/favicon.ico" />
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
   <script>
     const SUPABASE_URL = 'https://dmjelqvpcsafottblvwx.supabase.co';
-    const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...';
+    const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRtamVscXZwY3NhZm90dGJsdnd4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQxOTAzNDcsImV4cCI6MjA1OTc2NjM0N30.Z8NfPAVbUz7BIi9ifS9bdVFXUYj6dgu00pwP6THNA8A';
   </script>
 </head>
 <body class="bg-gray-100 p-4">
   <div class="flex justify-between items-center mb-2">
     <h1 class="text-xl font-bold">🚀평택 직장인/취미 밴드 구인구직</h1>
-    <button id="open-form-btn" class="text-white bg-blue-600 hover:bg-blue-700 px-3 py-1 text-sm rounded">
-      +글 등록
-    </button>
+    <button id="open-form-btn" class="text-white bg-blue-600 hover:bg-blue-700 px-3 py-1 text-sm rounded">+글 등록</button>
   </div>
 
   <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-900 text-sm p-3 rounded mb-4">
@@ -31,7 +29,7 @@
       <button class="filter-btn px-3 py-2 bg-gray-200 hover:bg-gray-300 rounded text-sm" data-filter="구직">구직</button>
       <button class="filter-btn px-3 py-2 bg-gray-200 hover:bg-gray-300 rounded text-sm" data-filter="매칭완료">매칭완료</button>
     </div>
-    <select id="regionFilter" class="border p-1 text-sm h-10 w-[150%]">
+    <select id="regionFilter" class="border p-1 text-sm h-10 max-w-xs"> <!-- max-w-xs로 고정 -->
       <option value="전체">전체</option>
     </select>
   </div>
@@ -89,27 +87,28 @@
         }));
 
         document.getElementById('job-list').addEventListener('click', e => {
-          if (e.target.closest('.match-btn')) return;
-          if (e.target.closest('.filter-btn, .part-filter-btn, #open-form-btn')) return;
+          // 단일 핸들러로 토글 + 팝업 분기
+          const matchBtn = e.target.closest('.match-btn');
+          if (matchBtn) {
+            openMatchPopup(Number(matchBtn.dataset.id));
+            return;
+          }
           const item = e.target.closest('.job-item');
           if (!item) return;
+          // 토글
           const content = item.querySelector('.expand-content');
           const toggleEl = item.querySelector('.expand-toggle');
           if (content && toggleEl) {
             const hidden = content.classList.toggle('hidden');
-            toggleEl.textContent = hidden ? '<더 보기>' : '<접기>';
-          }
-        });
-
-        document.getElementById('job-list').addEventListener('click', e => {
-          if (e.target.closest('.match-btn')) {
-            openMatchPopup(Number(e.target.dataset.id));
+            toggleEl.textContent = hidden ? '▶ 더 보기' : '▼ 접기';
           }
         });
       },
 
       initRealtime() {
-        this.supabase.channel('public:jobs').on('postgres_changes', { event:'*', schema:'public', table:'jobs' }, () => this.loadJobs()).subscribe();
+        this.supabase.channel('public:jobs')
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'jobs' }, () => this.loadJobs())
+          .subscribe();
       },
 
       async loadJobs() {
@@ -153,47 +152,88 @@
         jobs.forEach(job => {
           const parts = Array.isArray(job.part)?job.part:job.part.split(',');
           const partsHtml = parts.join(' / ');
-          const pin = job.pinned?'<span class="absolute top-1 left-1 text-yellow-500">📌</span>':'';
+          const pin = job.pinned?document.createElement('span'):null;
+          if (pin) { pin.className='absolute top-1 left-1 text-yellow-500'; pin.textContent='📌'; }
 
           if (job.is_matched) {
             const msg = job.type==='구인'
               ? `🎉 ${job.team} - ${partsHtml} 멤버 모집 완료!`
               : `🎉 ${job.nickname} - ${partsHtml} 밴드 합류 완료!`;
-            c.insertAdjacentHTML('beforeend',`<div class="bg-white p-4 rounded shadow job-item">${pin}<p class="text-center font-semibold">${msg}</p></div>`);
+            const div = document.createElement('div');
+            div.className = 'bg-white p-4 rounded shadow job-item';
+            if (pin) div.appendChild(pin);
+            const p = document.createElement('p'); p.className='text-center font-semibold'; p.textContent = msg;
+            div.appendChild(p);
+            c.appendChild(div);
           } else {
-            const matchBtn = `<button class="match-btn text-xs text-gray-600 hover:underline absolute top-2 right-3" data-id="${job.id}">매칭상태 변경</button>`;
-            const expandToggle = `<span class="expand-toggle text-xs text-blue-500 cursor-pointer">&lt;더 보기&gt;</span>`;
-            c.insertAdjacentHTML('beforeend',`
-              <div class="bg-white p-4 rounded shadow relative job-item cursor-pointer">${pin}
-                <h2 class="text-lg font-semibold mb-1">${job.type==='구직'?`[${partsHtml}]`:`[${job.team||'팀명 미정'}]`}<span class="text-sm text-gray-500 ml-1">(${job.region||'경기도 > 평택시'})</span></h2>
-                <p class="text-sm text-gray-600 mb-2">${job.type==='구인'?`<strong>${partsHtml}</strong> 멤버가 필요해요!`:job.intro||''}</p>
-                <div class="expand-content hidden text-sm text-gray-600 mb-2">
-                  <p><strong>닉네임:</strong>${job.nickname||'-'}</p>
-                  <p><strong>위치:</strong>${job.location||'-'}</p>
-                  <p><strong>나이:</strong>${job.age||'-'}</p>
-                  <p><strong>소개:</strong>${job.intro||'-'}</p>
-                </div>
-                <div class="text-right text-xs text-gray-400 mt-1">
-                  <a href="tel:${job.contact}" onclick="App.incrementClick(${job.id})" class="inline-block bg-blue-500 text-white px-1.5 py-[2px] rounded">연락처 확인</a>
-                </div>
-                ${expandToggle}${matchBtn}
-              </div>
-            `);
+            const div = document.createElement('div');
+            div.className = 'bg-white p-4 rounded shadow relative job-item cursor-pointer';
+            if (pin) div.appendChild(pin);
+            const h2 = document.createElement('h2');
+            h2.className='text-lg font-semibold mb-1';
+            h2.textContent = job.type==='구직'?`[${partsHtml}]`:`[${job.team||'팀명 미정'}]`;
+            const span = document.createElement('span');
+            span.className='text-sm text-gray-500 ml-1';
+            span.textContent = `(${job.region||'경기도 > 평택시'})`;
+            h2.appendChild(span);
+            div.appendChild(h2);
+            const p0 = document.createElement('p');
+            p0.className='text-sm text-gray-600 mb-2';
+            p0.innerHTML = job.type==='구인'?`<strong>${partsHtml}</strong> 멤버가 필요해요!`:job.intro||'';
+            div.appendChild(p0);
+            const content = document.createElement('div');
+            content.className = 'expand-content hidden text-sm text-gray-600 mb-2';
+            ['닉네임','위치','나이','소개'].forEach(label=>{
+              const p = document.createElement('p');
+              p.innerHTML = `<strong>${label}:</strong> ${job[label.toLowerCase()]||'-'}`;
+              content.appendChild(p);
+            });
+            div.appendChild(content);
+            const right = document.createElement('div');
+            right.className='text-right text-xs text-gray-400 mt-1';
+            const a = document.createElement('a');
+            a.href = `tel:${job.contact}`;
+            a.className='inline-block bg-blue-500 text-white px-1.5 py-[2px] rounded';
+            a.textContent='연락처 확인';
+            a.addEventListener('click',()=>this.incrementClick(job.id));
+            right.appendChild(a);
+            div.appendChild(right);
+            const toggle = document.createElement('span');
+            toggle.className='expand-toggle text-xs text-blue-500 cursor-pointer';
+            toggle.textContent='▶ 더 보기';
+            const btn = document.createElement('button');
+            btn.className='match-btn text-xs text-gray-600 hover:underline absolute top-2 right-3';
+            btn.dataset.id=job.id;
+            btn.textContent='매칭상태 변경';
+            div.appendChild(toggle);
+            div.appendChild(btn);
+            c.appendChild(div);
           }
         });
       },
 
       renderPagination() {
-        const total=Math.ceil(this.filteredJobs.length/this.pageSize);
-        const p=document.getElementById('pagination');p.innerHTML='';
-        for(let i=1;i<=total;i++)p.insertAdjacentHTML('beforeend',`<button class="px-3 py-1 border rounded ${i===this.currentPage?'bg-blue-600 text-white':'bg-white'}">${i}</button>`);
-        p.querySelectorAll('button').forEach((b,i)=>b.addEventListener('click',()=>{this.currentPage=i+1;this.renderPage();}));
+        const total = Math.ceil(this.filteredJobs.length/this.pageSize);
+        const p = document.getElementById('pagination'); p.innerHTML='';
+        for (let i=1; i<=total; i++) {
+          const b = document.createElement('button');
+          b.className = `px-3 py-1 border rounded ${i===this.currentPage?'bg-blue-600 text-white':'bg-white'}`;
+          b.textContent = i;
+          b.addEventListener('click', ()=>{ this.currentPage=i; this.renderPage(); });
+          p.appendChild(b);
+        }
       },
 
-      updateActiveFilter(btn){document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');},
-      incrementClick(id){this.supabase.from('jobs').update({clicks:this.supabase.postgrest.raw('clicks+1')}).eq('id',id).then(()=>this.loadJobs());}
+      updateActiveFilter(btn) {
+        document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+      },
+
+      incrementClick(id) {
+        this.supabase.from('jobs').update({clicks: this.supabase.postgrest.raw('clicks+1')}).eq('id',id).then(()=>this.loadJobs());
+      }
     };
-    window.App=App;App.init();
+    window.App = App; App.init();
   </script>
 </body>
 </html>
