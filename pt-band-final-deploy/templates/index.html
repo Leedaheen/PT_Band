@@ -29,8 +29,8 @@
       <button class="filter-btn px-3 py-2 bg-gray-200 hover:bg-gray-300 rounded text-sm" data-filter="구직">구직</button>
       <button class="filter-btn px-3 py-2 bg-gray-200 hover:bg-gray-300 rounded text-sm" data-filter="매칭완료">매칭완료</button>
     </div>
-    <select id="regionFilter" class="border p-1 text-sm h-10 max-w-xs"> <!-- max-w-xs로 고정 -->
-      <option value="전체">지역 전체</option>
+    <select id="regionFilter" class="border p-1 text-sm h-10 max-w-xs">
+      <option value="전체">전체</option>
     </select>
   </div>
 
@@ -87,7 +87,6 @@
         }));
 
         document.getElementById('job-list').addEventListener('click', e => {
-          // 단일 핸들러로 토글 + 팝업 분기
           const matchBtn = e.target.closest('.match-btn');
           if (matchBtn) {
             openMatchPopup(Number(matchBtn.dataset.id));
@@ -95,7 +94,6 @@
           }
           const item = e.target.closest('.job-item');
           if (!item) return;
-          // 토글
           const content = item.querySelector('.expand-content');
           const toggleEl = item.querySelector('.expand-toggle');
           if (content && toggleEl) {
@@ -121,7 +119,9 @@
 
       refreshRegionOptions() {
         const sel = document.getElementById('regionFilter');
-        sel.innerHTML = '<option value="전체">전체</option>' + Array.from(new Set(this.jobs.map(j => j.region||'경기도 > 평택시'))).map(r => `<option>${r}</option>`).join('');
+        sel.innerHTML = '<option value="전체">전체</option>' +
+          Array.from(new Set(this.jobs.map(j => j.region||'경기도 > 평택시')))
+            .map(r => `<option>${r}</option>`).join('');
       },
 
       applyFilters() {
@@ -147,79 +147,102 @@
       },
 
       renderJobs(jobs) {
-        const c = document.getElementById('job-list');
-        c.innerHTML = '';
+        const container = document.getElementById('job-list');
+        container.innerHTML = '';
         jobs.forEach(job => {
           const parts = Array.isArray(job.part)?job.part:job.part.split(',');
           const partsHtml = parts.join(' / ');
-          const pin = job.pinned?document.createElement('span'):null;
-          if (pin) { pin.className='absolute top-1 left-1 text-yellow-500'; pin.textContent='📌'; }
 
           if (job.is_matched) {
+            const div = document.createElement('div');
+            div.className = 'bg-white p-4 rounded shadow job-item';
+            if (job.pinned) {
+              const pin = document.createElement('span');
+              pin.className = 'absolute top-1 left-1 text-yellow-500';
+              pin.textContent = '📌';
+              div.appendChild(pin);
+            }
             const msg = job.type==='구인'
               ? `🎉 ${job.team} - ${partsHtml} 멤버 모집 완료!`
               : `🎉 ${job.nickname} - ${partsHtml} 밴드 합류 완료!`;
-            const div = document.createElement('div');
-            div.className = 'bg-white p-4 rounded shadow job-item';
-            if (pin) div.appendChild(pin);
-            const p = document.createElement('p'); p.className='text-center font-semibold'; p.textContent = msg;
+            const p = document.createElement('p');
+            p.className = 'text-center font-semibold';
+            p.textContent = msg;
             div.appendChild(p);
-            c.appendChild(div);
+            container.appendChild(div);
           } else {
             const div = document.createElement('div');
             div.className = 'bg-white p-4 rounded shadow relative job-item cursor-pointer';
-            if (pin) div.appendChild(pin);
+            if (job.pinned) {
+              const pin = document.createElement('span');
+              pin.className = 'absolute top-1 left-1 text-yellow-500';
+              pin.textContent = '📌';
+              div.appendChild(pin);
+            }
             const h2 = document.createElement('h2');
-            h2.className='text-lg font-semibold mb-1';
+            h2.className = 'text-lg font-semibold mb-1';
             h2.textContent = job.type==='구직'?`[${partsHtml}]`:`[${job.team||'팀명 미정'}]`;
-            const span = document.createElement('span');
-            span.className='text-sm text-gray-500 ml-1';
-            span.textContent = `(${job.region||'경기도 > 평택시'})`;
-            h2.appendChild(span);
+            const regionSpan = document.createElement('span');
+            regionSpan.className = 'text-sm text-gray-500 ml-1';
+            regionSpan.textContent = `(${job.region||'경기도 > 평택시'})`;
+            h2.appendChild(regionSpan);
             div.appendChild(h2);
             const p0 = document.createElement('p');
-            p0.className='text-sm text-gray-600 mb-2';
+            p0.className = 'text-sm text-gray-600 mb-2';
             p0.innerHTML = job.type==='구인'?`<strong>${partsHtml}</strong> 멤버가 필요해요!`:job.intro||'';
             div.appendChild(p0);
+
             const content = document.createElement('div');
             content.className = 'expand-content hidden text-sm text-gray-600 mb-2';
-            ['닉네임','위치','나이','소개'].forEach(label=>{
+            [
+              {label:'오픈톡 닉네임', value:job.nickname||'-'},
+              {label:'위치', value:job.location||'-'},
+              {label:'나이', value:job.age||'-'},
+              {label:'소개', value:job.intro||'-'}
+            ].forEach(item=>{
               const p = document.createElement('p');
-              p.innerHTML = `<strong>${label}:</strong> ${job[label.toLowerCase()]||'-'}`;
+              p.innerHTML = `<strong>${item.label}:</strong> ${item.value}`;
               content.appendChild(p);
             });
             div.appendChild(content);
+
             const right = document.createElement('div');
-            right.className='text-right text-xs text-gray-400 mt-1';
+            right.className = 'text-right text-xs text-gray-400 mt-1';
             const a = document.createElement('a');
             a.href = `tel:${job.contact}`;
-            a.className='inline-block bg-blue-500 text-white px-1.5 py-[2px] rounded';
-            a.textContent='연락처 확인';
-            a.addEventListener('click',()=>this.incrementClick(job.id));
+            a.className = 'inline-block bg-blue-500 text-white px-1.5 py-[2px] rounded';
+            a.textContent = '연락처 확인';
+            a.addEventListener('click', () => this.incrementClick(job.id));
             right.appendChild(a);
+            const pClicks = document.createElement('p');
+            pClicks.textContent = `👁 ${job.clicks||0}명 확인`;
+            right.appendChild(pClicks);
             div.appendChild(right);
+
             const toggle = document.createElement('span');
-            toggle.className='expand-toggle text-xs text-blue-500 cursor-pointer';
-            toggle.textContent='▶ 더 보기';
-            const btn = document.createElement('button');
-            btn.className='match-btn text-xs text-gray-600 hover:underline absolute top-2 right-3';
-            btn.dataset.id=job.id;
-            btn.textContent='매칭상태 변경';
+            toggle.className = 'expand-toggle text-xs text-blue-500 cursor-pointer';
+            toggle.textContent = '▶ 더 보기';
             div.appendChild(toggle);
+
+            const btn = document.createElement('button');
+            btn.className = 'match-btn text-xs text-gray-600 hover:underline absolute top-2 right-3';
+            btn.dataset.id = job.id;
+            btn.textContent = '매칭상태 변경';
             div.appendChild(btn);
-            c.appendChild(div);
+
+            container.appendChild(div);
           }
         });
       },
 
       renderPagination() {
         const total = Math.ceil(this.filteredJobs.length/this.pageSize);
-        const p = document.getElementById('pagination'); p.innerHTML='';
-        for (let i=1; i<=total; i++) {
+        const p = document.getElementById('pagination'); p.innerHTML = '';
+        for (let i = 1; i <= total; i++) {
           const b = document.createElement('button');
           b.className = `px-3 py-1 border rounded ${i===this.currentPage?'bg-blue-600 text-white':'bg-white'}`;
           b.textContent = i;
-          b.addEventListener('click', ()=>{ this.currentPage=i; this.renderPage(); });
+          b.addEventListener('click', ()=>{ this.currentPage = i; this.renderPage(); });
           p.appendChild(b);
         }
       },
