@@ -20,7 +20,7 @@ export default function openMatchPopup(jobId) {
     </div>`;
   document.body.appendChild(pwModal);
 
-  // 모달 클릭 방지 및 닫기 이벤트
+  // 클릭 시 모달 닫기 & 내부 클릭 차단
   const content = document.getElementById('password-modal-content');
   content.addEventListener('click', e => e.stopPropagation());
   pwModal.addEventListener('click', () => pwModal.remove());
@@ -30,22 +30,27 @@ export default function openMatchPopup(jobId) {
   document.getElementById('pw-submit').addEventListener('click', async e => {
     e.stopPropagation();
     const password = document.getElementById('password-input').value.trim();
+    console.log('입력된 비밀번호:', password);
     if (!password) {
       alert('비밀번호를 입력해주세요.');
       return;
     }
     try {
-      const response = await fetch(`/verify-password/${jobId}`, {
+      const url = `${window.location.origin}/verify-password/${jobId}`;
+      console.log('Verify URL:', url);
+      const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password })
       });
       const data = await response.json();
+      console.log('verify-password 응답:', response.status, data);
       if (!response.ok) throw new Error(data.message || '비밀번호 검증 실패');
       pwModal.remove();
       renderEditForm(data.job, password);
     } catch (err) {
-      alert(err.message);
+      console.error('비밀번호 검증 오류:', err);
+      alert(err.message || '비밀번호 검증 중 오류가 발생했습니다.');
       pwModal.remove();
     }
   });
@@ -58,9 +63,9 @@ function renderEditForm(job, password) {
   formModal.className = 'fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-center z-50';
 
   // 파트 옵션 생성
-  const parts = Array.isArray(job.part) ? job.part : JSON.parse(job.part || '[]');
+  const allParts = Array.isArray(job.part) ? job.part : JSON.parse(job.part || '[]');
   const matched = Array.isArray(job.matched_parts) ? job.matched_parts : JSON.parse(job.matched_parts || '[]');
-  const partOptions = parts.map(part => `
+  const partOptions = allParts.map(part => `
     <label class="block mb-1">
       <input type="checkbox" name="match" value="${part}" ${matched.includes(part) ? 'checked' : ''}/> ${part}
     </label>`).join('');
@@ -73,11 +78,10 @@ function renderEditForm(job, password) {
         <input name="nickname" value="${job.nickname || ''}" placeholder="닉네임" class="border p-2 w-full" />
         <input name="age" value="${job.age || ''}" placeholder="연령대" class="border p-2 w-full" />
         <select name="region" class="border p-2 w-full">
-          <option value="경기도 > 평택시" ${job.region === '경기도 > 평택시' ? 'selected' : ''}>경기도 > 평택시</option>
-          <option value="경기도 > 오산시" ${job.region === '경기도 > 오산시' ? 'selected' : ''}>경기도 > 오산시</option>
-          <option value="경기도 > 화성시" ${job.region === '경기도 > 화성시' ? 'selected' : ''}>경기도 > 화성시</option>
-          <option value="경기도 > 안성시" ${job.region === '경기도 > 안성시' ? 'selected' : ''}>경기도 > 안성시</option>
-          <option value="서울특별시 > 강남구" ${job.region === '서울특별시 > 강남구' ? 'selected' : ''}>서울특별시 > 강남구</option>
+          <!-- 옵션 반복 -->
+          ${['경기도 > 평택시','경기도 > 오산시','경기도 > 화성시','경기도 > 안성시','서울특별시 > 강남구']
+            .map(r => `<option value="${r}" ${job.region===r?'selected':''}>${r}</option>`)
+            .join('')}
         </select>
         <input name="location" value="${job.location || ''}" placeholder="위치" class="border p-2 w-full" />
         <input name="fee" value="${job.fee || ''}" placeholder="월 회비" class="border p-2 w-full" />
@@ -119,16 +123,22 @@ function renderEditForm(job, password) {
       intro: form.get('intro')
     };
     try {
-      const response = await fetch(`/update/${job.id}`, {
+      const url = `${window.location.origin}/update/${job.id}`;
+      console.log('Update URL:', url, payload);
+      const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
       const result = await response.json();
+      console.log('update 응답:', response.status, result);
       if (!response.ok) throw new Error(result.message || '수정 실패');
       alert('수정 및 매칭이 완료되었습니다.');
       formModal.remove();
+      // 업데이트 후 리스트 갱신
+      App.loadJobs();
     } catch (err) {
+      console.error('업데이트 오류:', err);
       alert(err.message);
     }
   });
