@@ -1,5 +1,4 @@
 import os
-import time
 import datetime
 from flask import Flask, render_template, request, jsonify, session
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -38,21 +37,17 @@ def index():
     locations = sorted({job.get("region", "경기도 > 평택시") for job in jobs})
     types = ["전체", "구인", "구직"]
     parts = sorted({p for job in jobs for p in job.get("part", [])})
-    return render_template("index.html",
-                           jobs=jobs,
-                           locations=locations,
-                           types=types,
-                           parts=parts)
+    return render_template("index.html", jobs=jobs, locations=locations, types=types, parts=parts)
 
 # 새 글 등록
 @app.route("/add", methods=["POST"])
 def add_job():
-    item = request.get_json()
+    item = request.get_json() or {}
     if not item:
         return jsonify(success=False, message="No data provided"), 400
 
     # 비밀번호 해시화
-    item["password"] = generate_password_hash(item["password"])
+    item["password"] = generate_password_hash(item.get("password", ""))
     item.update({
         "created_at": datetime.datetime.utcnow().isoformat(),
         "clicks": 0,
@@ -61,11 +56,9 @@ def add_job():
         "pinned": False
     })
 
-    resp = supabase.from_("jobs")\
-        .insert([item])\
-        .execute()
-    if resp.error:
-        return jsonify(success=False, message=resp.error.message), 500
+    resp = supabase.from_("jobs").insert([item]).execute()
+    if getattr(resp, 'status_code', None) not in (200, 201):
+        return jsonify(success=False, message=(getattr(resp, 'error', {}).get('message', 'Insertion failed'))), 500
     return jsonify(success=True)
 
 # 연락처 클릭(조회수 증가)
@@ -75,13 +68,12 @@ def click(job_id):
     if str(job_id) in clicked:
         return jsonify(success=True)
 
-    # clicks 컬럼을 +1
     resp = supabase.from_("jobs")\
         .update({"clicks": supabase.postgrest.raw("clicks + 1")})\
         .eq("id", job_id)\
         .execute()
-    if resp.error:
-        return jsonify(success=False, message=resp.error.message), 500
+    if getattr(resp, 'status_code', None) not in (200, 204):
+        return jsonify(success=False, message="Failed to update clicks"), 500
 
     clicked.append(str(job_id))
     session['clicked'] = clicked
@@ -90,25 +82,20 @@ def click(job_id):
 # 비밀번호 검증 및 관리자 핀 토글
 @app.route("/verify-password/<int:job_id>", methods=["POST"])
 def verify_password(job_id):
-    req = request.get_json()
-    pw = req.get("password")
+    req = request.get_json() or {}
+    pw = req.get("password", "")
 
-    # 해당 글 조회
-    resp = supabase.from_("jobs")\
-        .select("*")\
-        .eq("id", job_id)\
-        .single()\
-        .execute()
-    if resp.error or not resp.data:
-        return jsonify(success=False, message="잘못된 데이터입니다."), 404
+    resp = supabase.from_("jobs").select("*").eq("id", job_id).single().execute()
     job = resp.data
+    if getattr(resp, 'status_code', None) != 200 or not job:
+        return jsonify(success=False, message="잘못된 데이터입니다."), 404
 
-    # 관리자 비번 체크 (env ADMIN_PASSWORD)
+    # 관리자 비번 체크
     if pw == os.environ.get("ADMIN_PASSWORD"):
         return jsonify(success=True, job=job)
 
     # 일반 사용자 비번 체크
-    if check_password_hash(job["password"], pw):
+    if check_password_hash(job.get("password", ""), pw):
         return jsonify(success=True, job=job)
 
     return jsonify(success=False, message="비밀번호가 일치하지 않습니다."), 403
@@ -116,21 +103,16 @@ def verify_password(job_id):
 # 글 수정 및 매칭 상태 업데이트
 @app.route("/update/<int:job_id>", methods=["POST"])
 def update(job_id):
-    req = request.get_json()
-    pw = req.get("password")
+    req = request.get_json() or {}
+    pw = req.get("password", "")
 
-    # 기존 데이터 조회
-    resp = supabase.from_("jobs")\
-        .select("*")\
-        .eq("id", job_id)\
-        .single()\
-        .execute()
-    if resp.error or not resp.data:
-        return jsonify(success=False, message="잘못된 데이터입니다."), 404
+    resp = supabase.from_("jobs").select("*").eq("id", job_id).single().execute()
     job = resp.data
+    if getattr(resp, 'status_code', None) != 200 or not job:
+        return jsonify(success=False, message="잘못된 데이터입니다."), 404
 
     is_admin = pw == os.environ.get("ADMIN_PASSWORD")
-    if not is_admin and not check_password_hash(job["password"], pw):
+    if not is_admin and not check_password_hash(job.get("password", ""), pw):
         return jsonify(success=False, message="비밀번호가 일치하지 않습니다."), 403
 
     parts = req.get("parts", [])
@@ -139,19 +121,15 @@ def update(job_id):
         "is_matched": len(parts) == len(job.get("part", [])),
         "updated_at": datetime.datetime.utcnow().isoformat()
     }
-    # 추가 필드 수정 가능
     for key in ["team", "location", "type", "age", "region", "intro"]:
         if key in req:
             updates[key] = req[key]
     if is_admin and "pinned" in req:
         updates["pinned"] = req["pinned"]
 
-    upd = supabase.from_("jobs")\
-        .update(updates)\
-        .eq("id", job_id)\
-        .execute()
-    if upd.error:
-        return jsonify(success=False, message=upd.error.message), 500
+    upd = supabase.from_("jobs").update(updates).eq("id", job_id).execute()
+    if getattr(upd, 'status_code', None) not in (200, 204):
+        return jsonify(success=False, message=(getattr(upd, 'error', {}).get('message', 'Update failed'))), 500
 
     return jsonify(success=True, message="수정이 완료되었습니다.")
 
