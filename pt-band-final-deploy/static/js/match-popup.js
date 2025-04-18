@@ -23,28 +23,28 @@ export default function openMatchPopup(jobId) {
 
   // 배경 및 취소 버튼 클릭 시 모달 닫기
   modal.addEventListener('click', closeModal);
-  document.getElementById('cancel-btn').addEventListener('click', e => {
-    e.stopPropagation();
-    closeModal();
-  });
+  document.getElementById('cancel-btn').addEventListener('click', e => { e.stopPropagation(); closeModal(); });
 
-  // 확인 버튼 클릭 시 비밀번호 검증
+  // 2) 비밀번호 검증
   document.getElementById('submit-btn').addEventListener('click', async e => {
     e.stopPropagation();
-    e.preventDefault();
     const password = document.getElementById('password-input').value.trim();
     if (!password) {
       alert('비밀번호를 입력해주세요.');
       return;
     }
     try {
-      const response = await fetch(`/verify-password/${jobId}`, {
+      // 절대 경로 사용
+      const url = `${window.location.origin}/verify-password/${jobId}`;
+      const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password })
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.message || '비밀번호 검증에 실패했습니다.');
+      if (!response.ok) {
+        throw new Error(data.message || '비밀번호 검증 실패');
+      }
       closeModal();
       openMatchForm(data.job, password);
     } catch (error) {
@@ -62,7 +62,6 @@ export default function openMatchPopup(jobId) {
 
 // 매칭 상태 변경 폼 팝업 함수
 function openMatchForm(job, password) {
-  // 2) 매칭 폼 생성
   const parts = Array.isArray(job.part) ? job.part : [];
   const matched = Array.isArray(job.matched_parts) ? job.matched_parts : [];
   const optionsHtml = parts.map(p => `
@@ -90,30 +89,25 @@ function openMatchForm(job, password) {
 
   const modal = document.getElementById('match-modal');
   const content = document.getElementById('match-modal-content');
-
-  // 내부 클릭 차단
   content.addEventListener('click', e => e.stopPropagation());
 
-  // 배경 및 취소 버튼 클릭 시 닫기
   modal.addEventListener('click', closeFormModal);
-  document.getElementById('close-match-btn').addEventListener('click', e => {
-    e.stopPropagation();
-    closeFormModal();
-  });
+  document.getElementById('close-match-btn').addEventListener('click', e => { e.stopPropagation(); closeFormModal(); });
 
-  // 3) 저장 처리
   document.getElementById('match-form').addEventListener('submit', async e => {
-    e.stopPropagation();
-    e.preventDefault();
+    e.stopPropagation(); e.preventDefault();
     const selected = Array.from(document.querySelectorAll('#match-options input[name="match"]:checked')).map(i => i.value);
     try {
-      const response = await fetch(`/update/${job.id}`, {
+      const url = `${window.location.origin}/update/${job.id}`;
+      const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password, parts: selected })
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.message || '업데이트 실패');
+      if (!response.ok) {
+        throw new Error(data.message || '업데이트 실패');
+      }
       alert('매칭 상태가 업데이트 되었습니다.');
       closeFormModal();
     } catch (error) {
