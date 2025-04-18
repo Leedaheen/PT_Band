@@ -18,15 +18,14 @@ export default function openMatchPopup(jobId) {
   const passwordModal = document.getElementById('password-modal');
   const stopPropagation = e => e.stopPropagation();
 
-  // 모달 제거
   function removeModal() {
     const m = document.getElementById('password-modal');
     if (m) m.remove();
   }
 
-  // 버튼 및 배경 클릭 이벤트
+  // 모달 클릭 및 버튼 이벤트
   document.getElementById('cancel-btn').addEventListener('click', e => { stopPropagation(e); removeModal(); });
-  passwordModal.addEventListener('click', () => removeModal());
+  passwordModal.addEventListener('click', removeModal);
   passwordModal.querySelector('div > div').addEventListener('click', stopPropagation);
 
   // 2) 비밀번호 확인 로직
@@ -37,26 +36,23 @@ export default function openMatchPopup(jobId) {
       alert('비밀번호를 입력해주세요.');
       return;
     }
-
     try {
       const res = await fetch(`/verify-password/${jobId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password })
       });
+      const text = await res.text();
       let data;
       try {
-        data = await res.json();
-      } catch (parseError) {
-        const text = await res.text();
-        console.error('Response not JSON:', text);
+        data = JSON.parse(text);
+      } catch {
+        console.error('Non-JSON response:', text);
         throw new Error('서버 응답 형식이 올바르지 않습니다.');
       }
       if (!res.ok || !data.success) {
         throw new Error(data.message || '비밀번호 검증 실패');
       }
-
-      // 검증 성공
       removeModal();
       openMatchForm(data.job, password);
     } catch (err) {
@@ -66,7 +62,6 @@ export default function openMatchPopup(jobId) {
   });
 }
 
-// 매칭 상태 변경 폼 팝업 함수
 function openMatchForm(job, password) {
   const parts = Array.isArray(job.part) ? job.part : [];
   const matched = Array.isArray(job.matched_parts) ? job.matched_parts : [];
@@ -94,18 +89,15 @@ function openMatchForm(job, password) {
   document.body.insertAdjacentHTML('beforeend', formHtml);
 
   const matchModal = document.getElementById('match-modal');
-
   function removeFormModal() {
     const m = document.getElementById('match-modal');
     if (m) m.remove();
   }
 
-  // 배경/취소 버튼 클릭 이벤트
   document.getElementById('close-match-btn').addEventListener('click', e => { e.stopPropagation(); removeFormModal(); });
-  matchModal.addEventListener('click', () => removeFormModal());
+  matchModal.addEventListener('click', removeFormModal);
   matchModal.querySelector('div > div').addEventListener('click', e => e.stopPropagation());
 
-  // 4) 저장 처리
   document.getElementById('match-form').addEventListener('submit', async e => {
     e.stopPropagation(); e.preventDefault();
     const selected = Array.from(document.querySelectorAll('#match-options input[name="match"]:checked')).map(i => i.value);
@@ -115,15 +107,17 @@ function openMatchForm(job, password) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password, parts: selected })
       });
+      const text = await res.text();
       let result;
       try {
-        result = await res.json();
-      } catch (parseError) {
-        const text = await res.text();
-        console.error('Response not JSON:', text);
+        result = JSON.parse(text);
+      } catch {
+        console.error('Non-JSON response:', text);
         throw new Error('서버 응답 형식이 올바르지 않습니다.');
       }
-      if (!res.ok || !result.success) throw new Error(result.message || '업데이트 실패');
+      if (!res.ok || !result.success) {
+        throw new Error(result.message || '업데이트 실패');
+      }
       alert('매칭 상태가 업데이트 되었습니다.');
       removeFormModal();
     } catch (err) {
