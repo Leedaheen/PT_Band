@@ -10,10 +10,9 @@ app.secret_key = os.environ.get("FLASK_SECRET_KEY", "replace-with-your-secret")
 # Supabase 클라이언트 초기화
 SUPABASE_URL = os.environ["SUPABASE_URL"]
 SUPABASE_KEY = os.environ["SUPABASE_SERVICE_KEY"]
-
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# Jinja2용 날짜 포맷 필터
+# 날짜 포맷 필터
 @app.template_filter('datetimeformat')
 def format_datetime(value, format='%Y-%m-%d %H:%M'):
     try:
@@ -25,13 +24,13 @@ def format_datetime(value, format='%Y-%m-%d %H:%M'):
     except Exception:
         return value
 
-# 메인 페이지: jobs 테이블 조회
+# 메인 페이지
 @app.route("/")
 def index():
-    resp = supabase.from_("jobs")\
-        .select("*")\
-        .order("pinned", desc=True)\
-        .order("created_at", desc=True)\
+    resp = supabase.from_("jobs") \
+        .select("*") \
+        .order("pinned", desc=True) \
+        .order("created_at", desc=True) \
         .execute()
     jobs = resp.data or []
     locations = sorted({job.get("region", "경기도 > 평택시") for job in jobs})
@@ -46,7 +45,6 @@ def add_job():
     if not item:
         return jsonify(success=False, message="No data provided"), 400
 
-    # 비밀번호 해시화
     item["password"] = generate_password_hash(item.get("password", ""))
     item.update({
         "created_at": datetime.datetime.utcnow().isoformat(),
@@ -57,11 +55,13 @@ def add_job():
     })
 
     resp = supabase.from_("jobs").insert([item]).execute()
-    if getattr(resp, 'status_code', None) not in (200, 201):
-        return jsonify(success=False, message=(getattr(resp, 'error', {}).get('message', 'Insertion failed'))), 500
+    status = getattr(resp, 'status_code', None)
+    if status not in (200, 201):
+        msg = getattr(resp, 'error', {}).get('message', 'Insertion failed')
+        return jsonify(success=False, message=msg), 500
     return jsonify(success=True)
 
-# 연락처 클릭(조회수 증가)
+# 조회수 증가
 @app.route("/click/<int:job_id>", methods=["POST"])
 def click(job_id):
     clicked = session.setdefault('clicked', [])
@@ -72,14 +72,15 @@ def click(job_id):
         .update({"clicks": supabase.postgrest.raw("clicks + 1")})\
         .eq("id", job_id)\
         .execute()
-    if getattr(resp, 'status_code', None) not in (200, 204):
+    status = getattr(resp, 'status_code', None)
+    if status not in (200, 204):
         return jsonify(success=False, message="Failed to update clicks"), 500
 
     clicked.append(str(job_id))
     session['clicked'] = clicked
     return jsonify(success=True)
 
-# 비밀번호 검증 및 관리자 핀 토글
+# 비밀번호 검증
 @app.route("/verify-password/<int:job_id>", methods=["POST"])
 def verify_password(job_id):
     req = request.get_json() or {}
@@ -90,17 +91,17 @@ def verify_password(job_id):
     if getattr(resp, 'status_code', None) != 200 or not job:
         return jsonify(success=False, message="잘못된 데이터입니다."), 404
 
-    # 관리자 비번 체크
+    # 관리자 비번
     if pw == os.environ.get("ADMIN_PASSWORD"):
         return jsonify(success=True, job=job)
 
-    # 일반 사용자 비번 체크
+    # 일반 비번
     if check_password_hash(job.get("password", ""), pw):
         return jsonify(success=True, job=job)
 
     return jsonify(success=False, message="비밀번호가 일치하지 않습니다."), 403
 
-# 글 수정 및 매칭 상태 업데이트
+# 글 수정 및 매칭 업데이트
 @app.route("/update/<int:job_id>", methods=["POST"])
 def update(job_id):
     req = request.get_json() or {}
@@ -128,8 +129,10 @@ def update(job_id):
         updates["pinned"] = req["pinned"]
 
     upd = supabase.from_("jobs").update(updates).eq("id", job_id).execute()
-    if getattr(upd, 'status_code', None) not in (200, 204):
-        return jsonify(success=False, message=(getattr(upd, 'error', {}).get('message', 'Update failed'))), 500
+    status = getattr(upd, 'status_code', None)
+    if status not in (200, 204):
+        msg = getattr(upd, 'error', {}).get('message', 'Update failed')
+        return jsonify(success=False, message=msg), 500
 
     return jsonify(success=True, message="수정이 완료되었습니다.")
 
