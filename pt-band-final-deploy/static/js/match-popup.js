@@ -37,17 +37,24 @@ export default function openMatchPopup(jobId) {
       alert('비밀번호를 입력해주세요.');
       return;
     }
+
     try {
       const res = await fetch(`/verify-password/${jobId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password })
       });
-      // JSON이 아니면 에러 처리
-      const ct = res.headers.get('content-type') || '';
-      if (!ct.includes('application/json')) throw new Error('서버 응답 형식이 올바르지 않습니다.');
-      const data = await res.json();
-      if (!res.ok || !data.success) throw new Error(data.message || '비밀번호 검증 실패');
+      let data;
+      try {
+        data = await res.json();
+      } catch (parseError) {
+        const text = await res.text();
+        console.error('Response not JSON:', text);
+        throw new Error('서버 응답 형식이 올바르지 않습니다.');
+      }
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || '비밀번호 검증 실패');
+      }
 
       // 검증 성공
       removeModal();
@@ -61,7 +68,6 @@ export default function openMatchPopup(jobId) {
 
 // 매칭 상태 변경 폼 팝업 함수
 function openMatchForm(job, password) {
-  // 3) 폼 팝업 생성
   const parts = Array.isArray(job.part) ? job.part : [];
   const matched = Array.isArray(job.matched_parts) ? job.matched_parts : [];
   const optionsHtml = parts.map(p => `
@@ -109,9 +115,14 @@ function openMatchForm(job, password) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password, parts: selected })
       });
-      const ct = res.headers.get('content-type') || '';
-      if (!ct.includes('application/json')) throw new Error('서버 응답 형식이 올바르지 않습니다.');
-      const result = await res.json();
+      let result;
+      try {
+        result = await res.json();
+      } catch (parseError) {
+        const text = await res.text();
+        console.error('Response not JSON:', text);
+        throw new Error('서버 응답 형식이 올바르지 않습니다.');
+      }
       if (!res.ok || !result.success) throw new Error(result.message || '업데이트 실패');
       alert('매칭 상태가 업데이트 되었습니다.');
       removeFormModal();
