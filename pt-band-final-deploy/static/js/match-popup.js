@@ -1,128 +1,118 @@
-// match-popup.js
+import openForm from '/static/js/form-popup.js';
 
 export default function openMatchPopup(jobId) {
-  // 1) 비밀번호 입력 모달 생성
-  const modalHtml = `
-    <div id="password-modal" class="fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-center z-50">
-      <div id="password-modal-content" class="bg-white p-6 rounded shadow-lg max-w-sm w-full">
-        <h2 class="text-xl font-semibold mb-4">비밀번호 입력</h2>
-        <input id="password-input" type="password" placeholder="비밀번호" class="border p-2 w-full mb-4" />
-        <div class="flex justify-end space-x-2">
-          <button type="button" id="cancel-btn" class="bg-gray-500 text-white px-4 py-2 rounded">취소</button>
-          <button type="button" id="submit-btn" class="bg-blue-500 text-white px-4 py-2 rounded">확인</button>
-        </div>
+  const supabase = App.supabase;
+  // 1) 비밀번호 입력 모달
+  const pwModal = document.createElement('div');
+  pwModal.id = 'password-modal';
+  pwModal.className = 'fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-center z-50';
+  pwModal.innerHTML = `
+    <div id="password-modal-content" class="bg-white p-6 rounded shadow-lg max-w-sm w-full">
+      <h2 class="text-xl font-semibold mb-4">비밀번호 확인</h2>
+      <input id="password-input" type="password" placeholder="비밀번호" class="border p-2 w-full mb-4" />
+      <div class="flex justify-end space-x-2">
+        <button id="pw-cancel" class="bg-gray-500 text-white px-4 py-2 rounded">취소</button>
+        <button id="pw-submit" class="bg-blue-500 text-white px-4 py-2 rounded">확인</button>
       </div>
     </div>`;
-  document.body.insertAdjacentHTML('beforeend', modalHtml);
-
-  const modal = document.getElementById('password-modal');
+  document.body.appendChild(pwModal);
   const content = document.getElementById('password-modal-content');
   content.addEventListener('click', e => e.stopPropagation());
-
-  // 배경 및 취소 버튼 클릭 시 닫기
-  modal.addEventListener('click', closeModal);
-  document.getElementById('cancel-btn').addEventListener('click', e => {
-    e.stopPropagation();
-    closeModal();
-  });
+  pwModal.addEventListener('click', () => pwModal.remove());
+  document.getElementById('pw-cancel').addEventListener('click', e => { e.stopPropagation(); pwModal.remove(); });
 
   // 2) 비밀번호 검증
-  document.getElementById('submit-btn').addEventListener('click', async e => {
+  document.getElementById('pw-submit').addEventListener('click', async e => {
     e.stopPropagation();
     const password = document.getElementById('password-input').value.trim();
-    if (!password) {
-      alert('비밀번호를 입력해주세요.');
-      return;
-    }
+    if (!password) { alert('비밀번호를 입력해주세요.'); return; }
     try {
-      // 상대 경로로 요청
-      const response = await fetch(`/verify-password/${jobId}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch(`/verify-password/${jobId}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password })
       });
-      const data = await response.json();
-      console.log('verify-password response:', response.status, data);
-      if (!response.ok) {
-        throw new Error(data.message || '비밀번호 검증 실패');
-      }
-      closeModal();
-      openMatchForm(data.job, password);
-    } catch (error) {
-      console.error('비밀번호 검증 오류:', error);
-      alert(error.message || '비밀번호 검증 중 오류가 발생했습니다.');
-      closeModal();
+      const data = await res.json();
+      if (!res.ok) { throw new Error(data.message); }
+      pwModal.remove();
+      renderEditForm(data.job, password);
+    } catch(err) {
+      alert(err.message || '비밀번호 검증 실패');
+      pwModal.remove();
     }
   });
-
-  function closeModal() {
-    const m = document.getElementById('password-modal');
-    if (m) m.remove();
-  }
 }
 
-// 매칭 상태 변경 폼 팝업 함수
-function openMatchForm(job, password) {
+function renderEditForm(job, password) {
+  // 3) 수정 폼 모달
+  const formModal = document.createElement('div');
+  formModal.id = 'match-modal';
+  formModal.className = 'fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-center z-50';
+  // 파트 옵션
   const parts = Array.isArray(job.part) ? job.part : [];
   const matched = Array.isArray(job.matched_parts) ? job.matched_parts : [];
-  const optionsHtml = parts.map(p => `
+  const partOptions = parts.map(p => `
     <label class="block mb-1">
-      <input type="checkbox" name="match" value="${p}" ${matched.includes(p) ? 'checked' : ''} /> ${p}
+      <input type="checkbox" name="match" value="${p}" ${matched.includes(p)?'checked':''}/> ${p}
     </label>`).join('');
-
-  const formHtml = `
-    <div id="match-modal" class="fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-center z-50">
-      <div id="match-modal-content" class="bg-white p-6 rounded shadow-lg max-w-sm w-full overflow-auto">
-        <h2 class="text-xl font-semibold mb-4">매칭 상태 변경</h2>
-        <form id="match-form">
-          <div class="mb-4">
-            <p class="font-semibold mb-2">매칭 완료할 파트를 선택하세요:</p>
-            <div id="match-options">${optionsHtml || '<p>선택 가능한 파트가 없습니다.</p>'}</div>
-          </div>
-          <div class="flex justify-end space-x-2">
-            <button type="button" id="close-match-btn" class="bg-gray-500 text-white px-4 py-2 rounded">취소</button>
-            <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded">저장</button>
-          </div>
-        </form>
-      </div>
+  formModal.innerHTML = `
+    <div id="match-modal-content" class="bg-white p-6 rounded shadow-lg max-w-md w-full overflow-auto">
+      <h2 class="text-xl font-semibold mb-4">글 수정 및 매칭</h2>
+      <form id="edit-form" class="space-y-3">
+        <input name="team" value="${job.team||''}" placeholder="밴드명" class="border p-2 w-full"/>
+        <input name="nickname" value="${job.nickname||''}" placeholder="오픈톡 닉네임" class="border p-2 w-full"/>
+        <input name="age" value="${job.age||''}" placeholder="연령대" class="border p-2 w-full"/>
+        <select name="region" class="border p-2 w-full">
+          <option ${job.region==='경기도 > 평택시'?'selected':''}>경기도 > 평택시</option>
+          <option ${job.region==='경기도 > 오산시'?'selected':''}>경기도 > 오산시</option>
+          <option ${job.region==='경기도 > 화성시'?'selected':''}>경기도 > 화성시</option>
+          <option ${job.region==='경기도 > 안성시'?'selected':''}>경기도 > 안성시</option>
+          <option ${job.region==='서울특별시 > 강남구'?'selected':''}>서울특별시 > 강남구</option>
+        </select>
+        <input name="location" value="${job.location||''}" placeholder="위치" class="border p-2 w-full"/>
+        <input name="fee" value="${job.fee||''}" placeholder="월 회비" class="border p-2 w-full"/>
+        <input name="contact" value="${job.contact||''}" placeholder="연락처" class="border p-2 w-full"/>
+        <textarea name="intro" placeholder="소개글" class="border p-2 w-full" maxlength="100">${job.intro||''}</textarea>
+        <div>
+          <p class="font-semibold">매칭 완료할 파트 선택:</p>
+          ${partOptions}
+        </div>
+        <div class="flex justify-end space-x-2">
+          <button type="button" id="cancel-edit" class="bg-gray-500 text-white px-4 py-2 rounded">취소</button>
+          <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded">저장</button>
+        </div>
+      </form>
     </div>`;
-  document.body.insertAdjacentHTML('beforeend', formHtml);
-
-  const modal = document.getElementById('match-modal');
+  document.body.appendChild(formModal);
   const content = document.getElementById('match-modal-content');
-  content.addEventListener('click', e => e.stopPropagation());
+  content.addEventListener('click', e=>e.stopPropagation());
+  formModal.addEventListener('click', ()=>formModal.remove());
+  document.getElementById('cancel-edit').addEventListener('click', e=>{ e.stopPropagation(); formModal.remove(); });
 
-  modal.addEventListener('click', closeFormModal);
-  document.getElementById('close-match-btn').addEventListener('click', e => {
-    e.stopPropagation();
-    closeFormModal();
-  });
-
-  document.getElementById('match-form').addEventListener('submit', async e => {
-    e.stopPropagation();
+  // 4) 저장 처리
+  document.getElementById('edit-form').addEventListener('submit', async e => {
     e.preventDefault();
-    const selected = Array.from(document.querySelectorAll('#match-options input[name="match"]:checked')).map(i => i.value);
+    const form = new FormData(e.target);
+    const selected = Array.from(form.getAll('match'));
+    const payload = {
+      password,
+      parts: selected,
+      team: form.get('team'),
+      nickname: form.get('nickname'),
+      age: form.get('age'),
+      region: form.get('region'),
+      location: form.get('location'),
+      fee: form.get('fee'),
+      contact: form.get('contact'),
+      intro: form.get('intro')
+    };
     try {
-      const response = await fetch(`/update/${job.id}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password, parts: selected })
-      });
-      const data = await response.json();
-      console.log('update response:', response.status, data);
-      if (!response.ok) {
-        throw new Error(data.message || '업데이트 실패');
-      }
-      alert('매칭 상태가 업데이트 되었습니다.');
-      closeFormModal();
-    } catch (error) {
-      console.error('업데이트 오류:', error);
-      alert(error.message || '매칭 저장 중 오류가 발생했습니다.');
+      const res = await fetch(`/update/${job.id}`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+      alert('수정 및 매칭 완료!');
+      formModal.remove();
+    } catch(err) {
+      alert(err.message);
     }
   });
-
-  function closeFormModal() {
-    const m = document.getElementById('match-modal');
-    if (m) m.remove();
-  }
 }
