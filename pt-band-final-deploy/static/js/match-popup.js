@@ -4,103 +4,76 @@ export default function openMatchPopup(jobId) {
   // 1) 비밀번호 입력 모달 생성
   const modalHtml = `
     <div id="password-modal" class="fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-center z-50">
-      <div class="bg-white p-6 rounded shadow-lg max-w-sm w-full">
+      <div class="bg-white p-6 rounded shadow-lg max-w-sm w-full" id="password-modal-content">
         <h2 class="text-xl font-semibold mb-4">비밀번호 입력</h2>
         <input id="password-input" type="password" placeholder="비밀번호" class="border p-2 w-full mb-4" />
         <div class="flex justify-end space-x-2">
-          <button id="cancel-btn" class="bg-gray-500 text-white px-4 py-2 rounded">취소</button>
-          <button id="submit-btn" class="bg-blue-500 text-white px-4 py-2 rounded">확인</button>
+          <button type="button" id="cancel-btn" class="bg-gray-500 text-white px-4 py-2 rounded">취소</button>
+          <button type="button" id="submit-btn" class="bg-blue-500 text-white px-4 py-2 rounded">확인</button>
         </div>
       </div>
     </div>`;
   document.body.insertAdjacentHTML('beforeend', modalHtml);
 
-  const passwordModal = document.getElementById('password-modal');
-  const stopPropagation = e => e.stopPropagation();
+  const modal = document.getElementById('password-modal');
+  const content = document.getElementById('password-modal-content');
 
-  function removeModal() {
-    const m = document.getElementById('password-modal');
-    if (m) m.remove();
-  }
+  // 클릭 이벤트 전파 차단
+  const stop = e => e.stopPropagation();
+  content.addEventListener('click', stop);
 
-  // 모달 클릭 및 버튼 이벤트
-  document.getElementById('cancel-btn').addEventListener('click', e => { stopPropagation(e); removeModal(); });
-  passwordModal.addEventListener('click', removeModal);
-  passwordModal.querySelector('div > div').addEventListener('click', stopPropagation);
+  // 모달 배경 클릭이나 취소 버튼 클릭 시 닫기
+  modal.addEventListener('click', () => modal.remove());
+  document.getElementById('cancel-btn').addEventListener('click', stop);
+  document.getElementById('cancel-btn').addEventListener('click', () => modal.remove());
 
-  // 2) 비밀번호 확인 로직
-  document.getElementById('submit-btn').addEventListener('click', async e => {
-    stopPropagation(e);
+  // 확인 버튼 클릭 시 서버 검증
+  document.getElementById('submit-btn').addEventListener('click', async stopPropagation => {
+    stopPropagation.stopPropagation();
     const password = document.getElementById('password-input').value.trim();
     if (!password) {
       alert('비밀번호를 입력해주세요.');
       return;
     }
     try {
-      const res = await fetch(`/verify-password/${jobId}`, {
+      const response = await fetch(`/verify-password/${jobId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password })
       });
-      let data;
-      try {
-        data = await res.json();
-      } catch (parseErr) {
-        console.error('JSON parse error:', parseErr);
-        alert('서버 응답을 처리하는 중 오류가 발생했습니다.');
-        removeModal();
+      const result = await response.json();
+      if (!response.ok) {
+        alert(result.message || '비밀번호 검증에 실패했습니다.');
+        modal.remove();
         return;
       }
-      if (!res.ok) {
-        alert(data.message || '비밀번호 검증 실패');
-        removeModal();
-        return;
-      }
-      // 검증 성공
-      removeModal();
-      openMatchForm(data.job, password);
-    } catch (err) {
-      console.error('Fetch error:', err);
-      alert('비밀번호 검증 중 네트워크 오류가 발생했습니다.');
-      removeModal();
-    }
-  });
-      const text = await res.text();
-      let data;
-      try {
-        data = JSON.parse(text);
-      } catch {
-        console.error('Non-JSON response:', text);
-        throw new Error('서버 응답 형식이 올바르지 않습니다.');
-      }
-      if (!res.ok || !data.success) {
-        throw new Error(data.message || '비밀번호 검증 실패');
-      }
-      removeModal();
-      openMatchForm(data.job, password);
-    } catch (err) {
-      alert(err.message);
-      removeModal();
+      modal.remove();
+      openMatchForm(result.job, password);
+    } catch (error) {
+      console.error('매칭 검증 오류:', error);
+      alert('비밀번호 검증 중 오류가 발생했습니다.');
+      modal.remove();
     }
   });
 }
 
 function openMatchForm(job, password) {
+  // 2) 매칭 폼 생성
   const parts = Array.isArray(job.part) ? job.part : [];
   const matched = Array.isArray(job.matched_parts) ? job.matched_parts : [];
-  const optionsHtml = parts.map(p => `
+  const options = parts.map(p => `
     <label class="block mb-1">
-      <input type="checkbox" name="match" value="${p}" ${matched.includes(p) ? 'checked' : ''} /> ${p}
+      <input type="checkbox" name="match" value="${p}" ${matched.includes(p) ? 'checked' : ''}/> ${p}
     </label>`).join('');
 
   const formHtml = `
     <div id="match-modal" class="fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-center z-50">
-      <div class="bg-white p-6 rounded shadow-lg max-w-sm w-full overflow-auto">
+      <div class="bg-white p-6 rounded shadow-lg max-w-sm w-full" id="match-modal-content">
         <h2 class="text-xl font-semibold mb-4">매칭 상태 변경</h2>
         <form id="match-form">
           <div class="mb-4">
             <p class="font-semibold mb-2">매칭 완료할 파트를 선택하세요:</p>
-            <div id="match-options">${optionsHtml || '<p>선택 가능한 파트가 없습니다.</p>'}</div>
+            <div id="match-options">${options || '<p>선택 가능한 파트가 없습니다.</p>'}</div>
           </div>
           <div class="flex justify-end space-x-2">
             <button type="button" id="close-match-btn" class="bg-gray-500 text-white px-4 py-2 rounded">취소</button>
@@ -111,40 +84,35 @@ function openMatchForm(job, password) {
     </div>`;
   document.body.insertAdjacentHTML('beforeend', formHtml);
 
-  const matchModal = document.getElementById('match-modal');
-  function removeFormModal() {
-    const m = document.getElementById('match-modal');
-    if (m) m.remove();
-  }
+  const modal = document.getElementById('match-modal');
+  const content = document.getElementById('match-modal-content');
+  content.addEventListener('click', e => e.stopPropagation());
 
-  document.getElementById('close-match-btn').addEventListener('click', e => { e.stopPropagation(); removeFormModal(); });
-  matchModal.addEventListener('click', removeFormModal);
-  matchModal.querySelector('div > div').addEventListener('click', e => e.stopPropagation());
+  // 배경 및 취소 버튼 클릭 시 폼 닫기
+  modal.addEventListener('click', () => modal.remove());
+  document.getElementById('close-match-btn').addEventListener('click', e => { e.stopPropagation(); modal.remove(); });
 
+  // 3) 저장 처리
   document.getElementById('match-form').addEventListener('submit', async e => {
-    e.stopPropagation(); e.preventDefault();
+    e.stopPropagation();
+    e.preventDefault();
     const selected = Array.from(document.querySelectorAll('#match-options input[name="match"]:checked')).map(i => i.value);
     try {
-      const res = await fetch(`/update/${job.id}`, {
+      const response = await fetch(`/update/${job.id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password, parts: selected })
       });
-      const text = await res.text();
-      let result;
-      try {
-        result = JSON.parse(text);
-      } catch {
-        console.error('Non-JSON response:', text);
-        throw new Error('서버 응답 형식이 올바르지 않습니다.');
-      }
-      if (!res.ok || !result.success) {
-        throw new Error(result.message || '업데이트 실패');
+      const result = await response.json();
+      if (!response.ok) {
+        alert(result.message || '업데이트 실패');
+        return;
       }
       alert('매칭 상태가 업데이트 되었습니다.');
-      removeFormModal();
-    } catch (err) {
-      alert(err.message);
+      modal.remove();
+    } catch (error) {
+      console.error('저장 오류:', error);
+      alert('매칭 저장 중 오류가 발생했습니다.');
     }
   });
 }
