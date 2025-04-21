@@ -62,6 +62,16 @@ def click(job_id):
 def verify_password(job_id):
     req = request.get_json() or {}
     pw = req.get("password", "").strip()
+    
+    # (디버그) 입력값과 DB 해시 찍어보기
+    print(f"[DEBUG] 입력비번: '{pw}', DB에저장된해시: '{job.get('password')}'")
+
+    # 1) 일반 사용자 비번 해시 체크
+    if check_password_hash(job.get("password", ""), pw):
+        return jsonify(success=True, job=job)
+    # 2) 관리자 비번 체크
+    if pw == ADMIN_PASSWORD:
+        return jsonify(success=True, job=job)
 
     resp = supabase.from_("jobs").select("*").eq("id", job_id).single().execute()
     job = resp.data
