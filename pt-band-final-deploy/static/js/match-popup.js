@@ -1,145 +1,125 @@
-import openForm from '/static/js/form-popup.js';
-
-export default function openMatchPopup(jobId) {
-  // 1) 비밀번호 입력 모달 생성
-  const pwModal = document.createElement('div');
-  pwModal.id = 'password-modal';
-  pwModal.className = 'fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-center z-50';
-  pwModal.innerHTML = `
-    <div id="password-modal-content" class="bg-white p-6 rounded shadow-lg max-w-sm w-full">
-      <h2 class="text-xl font-semibold mb-4">비밀번호 확인</h2>
-      <input id="password-input" type="password" placeholder="비밀번호" class="border p-2 w-full mb-4" />
-      <div class="flex justify-end space-x-2">
-        <button id="pw-cancel" class="bg-gray-500 text-white px-4 py-2 rounded">취소</button>
-        <button id="pw-submit" class="bg-blue-500 text-white px-4 py-2 rounded">확인</button>
-      </div>
-    </div>`;
-  document.body.appendChild(pwModal);
-
-  // 모달 이벤트 바인딩
-  const content = document.getElementById('password-modal-content');
-  content.addEventListener('click', e => e.stopPropagation());
-  pwModal.addEventListener('click', () => pwModal.remove());
-  document.getElementById('pw-cancel').addEventListener('click', e => { e.stopPropagation(); pwModal.remove(); });
-
-  // 2) 비밀번호 검증
-  document.getElementById('pw-submit').addEventListener('click', async e => {
-    e.stopPropagation();
-    const password = document.getElementById('password-input').value.trim();
-    console.log('입력된 비밀번호:', password);
-    if (!password) {
-      alert('비밀번호를 입력해주세요.');
-      return;
-    }
-    try {
-      const url = `/verify-password/${jobId}`;
-      console.log('Verify URL:', url);
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password })
-      });
-      const data = await response.json();
-      console.log('verify-password 응답:', response.status, data);
-      if (!response.ok) throw new Error(data.message || '비밀번호 검증 실패');
-      pwModal.remove();
-      renderEditForm(data.job, password);
-    } catch (err) {
-      console.error('비밀번호 검증 오류:', err);
-      alert(err.message || '비밀번호 검증 중 오류가 발생했습니다.');
-      // 모달 닫지 않고 재입력 가능하도록 유지
-    }
-  });
-}
-
-// 3) 글 수정 + 매칭 상태 변경 폼 렌더링
-function renderEditForm(job, password) {
-  const formModal = document.createElement('div');
-  formModal.id = 'match-modal';
-  formModal.className = 'fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-center z-50';
-
-  const allParts = Array.isArray(job.part) ? job.part : JSON.parse(job.part || '[]');
-  const matched = Array.isArray(job.matched_parts) ? job.matched_parts : JSON.parse(job.matched_parts || '[]');
-  const partOptions = allParts.map(part => `
-    <label class="block mb-1">
-      <input type="checkbox" name="match" value="${part}" ${matched.includes(part) ? 'checked' : ''}/> ${part}
-    </label>`).join('');
-
-  formModal.innerHTML = `
-    <div id="match-modal-content" class="bg-white p-6 rounded shadow-lg max-w-md w-full overflow-auto">
-      <h2 class="text-xl font-semibold mb-4">글 수정 및 매칭</h2>
-      <form id="edit-form" class="space-y-3">
-        <input name="team" value="${job.team || ''}" placeholder="밴드명" class="border p-2 w-full" />
-        <input name="nickname" value="${job.nickname || ''}" placeholder="닉네임" class="border p-2 w-full" />
-        <input name="age" value="${job.age || ''}" placeholder="연령대" class="border p-2 w-full" />
-        <select name="region" class="border p-2 w-full">
-          ${['경기도 > 평택시','경기도 > 오산시','경기도 > 화성시','경기도 > 안성시','서울특별시 > 강남구']
-            .map(r => `<option value="${r}" ${job.region===r?'selected':''}>${r}</option>`)
-            .join('')}
+export default function openForm() {
+  const popup = document.createElement('div');
+  popup.className = 'fixed top-1/2 left-1/2 bg-white p-4 rounded shadow z-50 max-w-sm w-full max-h-[90%] overflow-auto';
+  popup.style.transform = 'translate(-50%, -50%)';
+  popup.innerHTML = `
+    <div class='text-right'>
+      <button id='close-btn' class='text-sm text-red-500'>✖ 닫기</button>
+    </div>
+    <form id='new-post-form'>
+      <p class='mb-2 text-sm font-semibold'>글 작성하기</p>
+      <div class='mb-2'>
+        <label class='block text-sm font-medium mb-1'>구분:</label>
+        <select name='type' class='border p-1 w-full mb-2'>
+          <option value='구인'>구인</option>
+          <option value='구직'>구직</option>
         </select>
-        <input name="location" value="${job.location || ''}" placeholder="위치" class="border p-2 w-full" />
-        <input name="fee" value="${job.fee || ''}" placeholder="월 회비" class="border p-2 w-full" />
-        <input name="contact" value="${job.contact || ''}" placeholder="연락처" class="border p-2 w-full" />
-        <textarea name="intro" placeholder="소개글" class="border p-2 w-full" maxlength="100">${job.intro || ''}</textarea>
-        <div>
-          <p class="font-semibold mb-2">매칭 완료할 파트 선택:</p>
-          ${partOptions}
-        </div>
-        <div class="mb-3">
-          <label class="inline-flex items-center">
-            <input type="checkbox" name="pinned" class="mr-2" ${job.pinned ? 'checked' : ''}/>
-            고정하기
-          </label>
-        </div>
-        <div class="flex justify-end space-x-2">
-          <button type="button" id="cancel-edit" class="bg-gray-500 text-white px-4 py-2 rounded">취소</button>
-          <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded">저장</button>
-        </div>
-      </form>
-    </div>`;
-  document.body.appendChild(formModal);
+      </div>
+      <div id='form-content'></div>
+      <div id='admin-pin-toggle' class='hidden mb-2'>
+        <label class='text-sm'>
+          <input type='checkbox' name='pinned' class='mr-1' /> 📌 고정하기 (관리자 전용)
+        </label>
+      </div>
+      <div class='mt-4 text-right'>
+        <button type='submit' class='bg-blue-600 text-white px-3 py-1 rounded'>등록</button>
+      </div>
+    </form>`;
+  document.body.appendChild(popup);
 
-  const content = document.getElementById('match-modal-content');
-  content.addEventListener('click', e => e.stopPropagation());
-  formModal.addEventListener('click', () => formModal.remove());
-  document.getElementById('cancel-edit').addEventListener('click', e => { e.stopPropagation(); formModal.remove(); });
+  popup.querySelector('#close-btn').addEventListener('click', () => popup.remove());
 
-  // 4) 수정 저장
-  document.getElementById('edit-form').addEventListener('submit', async e => {
+  const formTypeSelect = popup.querySelector('select[name="type"]');
+  const formContent = popup.querySelector('#form-content');
+  formTypeSelect.addEventListener('change', () => renderFormFields(formContent, formTypeSelect.value));
+  renderFormFields(formContent, formTypeSelect.value);
+
+  popup.querySelector('#new-post-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const form = new FormData(e.target);
-    const selectedParts = Array.from(form.getAll('match'));
+    const password = form.get('password').trim();
+
+    if (password.length !== 4) {
+      return alert("비밀번호는 4자리여야 합니다.");
+    }
+
     const payload = {
-      password,
-      parts: selectedParts,
-      team: form.get('team'),
-      nickname: form.get('nickname'),
-      age: form.get('age'),
-      region: form.get('region'),
-      location: form.get('location'),
-      fee: form.get('fee'),
-      contact: form.get('contact'),
-      intro: form.get('intro'),
-      pinned: Boolean(form.get('pinned'))
+      type:       form.get('type'),
+      team:       form.get('team')     || null,
+      nickname:   form.get('nickname') || null,
+      age:        form.get('age')      || null,
+      region:     form.get('region')   || '경기도 > 평택시',
+      location:   form.get('location') || null,
+      fee:        form.get('fee')      || null,
+      contact:    form.get('contact')  || null,
+      intro:      form.get('intro')    || null,
+      password:   password,
+      part:       form.getAll('part'),
+      pinned:     form.get('pinned') === 'on'
     };
+
     try {
-      const url = `/verify-password/${jobId}`;
-      console.log('Update URL:', url, payload);
-      const response = await fetch(url, {
+      const response = await fetch('/add', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
       const result = await response.json();
-      console.log('update 응답:', response.status, result);
-      if (!response.ok) throw new Error(result.message || '수정 실패');
-      alert('수정 및 매칭이 완료되었습니다.');
-      formModal.remove();
-      // 업데이트 후 리스트 갱신
-      App.loadJobs();
+
+      if (!response.ok || !result.success) {
+        alert('등록 실패: ' + (result.message || '오류 발생'));
+      } else {
+        alert('등록 성공!');
+        popup.remove();
+        if (window.App) window.App.loadJobs();
+      }
     } catch (err) {
-      console.error('업데이트 오류:', err);
-      alert(err.message);
+      console.error('등록 오류:', err);
+      alert('서버 오류: ' + err.message);
     }
   });
+
+  function renderFormFields(container, type) {
+    const checklistHTML = ['보컬(남)', '보컬(여)', '드럼', '베이스', '기타', '키보드', '그 외']
+      .map(p => `<label class='mr-2'><input type='checkbox' name='part' value='${p}' class='mr-1'/>${p}</label>`)
+      .join(' ');
+
+    const regionSelectHTML = `
+      <select required name="region" class="border p-1 w-full mb-2">
+        <option value="경기도 > 평택시" selected>경기도 > 평택시</option>
+        <option value="경기도 > 오산시">경기도 > 오산시</option>
+        <option value="경기도 > 화성시">경기도 > 화성시</option>
+        <option value="경기도 > 안성시">경기도 > 안성시</option>
+        <option value="서울특별시 > 강남구">서울특별시 > 강남구</option>
+        <option value="부산광역시 > 해운대구">부산광역시 > 해운대구</option>
+      </select>`;
+
+    if (type === '구인') {
+      container.innerHTML = `
+        <input required name='team' placeholder='밴드명 필수' class='border p-1 w-full mb-2'/>
+        <input required name='nickname' placeholder='오픈톡 닉네임 필수' class='border p-1 w-full mb-2'/>
+        <input name='age' placeholder='멤버 연령대' class='border p-1 w-full mb-2'/>
+        <div class='mb-2'>
+          <label class='block mb-1'>구인 파트:</label>
+          <div class='grid grid-cols-2 gap-4'>${checklistHTML}</div>
+        </div>
+        <input required name='location' placeholder='연습실 위치 (필수)' class='border p-1 w-full mb-2'/>
+        ${regionSelectHTML}
+        <input name='fee' placeholder='월 회비 선택' class='border p-1 w-full mb-2'/>
+        <input required name='contact' placeholder='연락처 필수' class='border p-1 w-full mb-2'/>
+        <textarea name='intro' placeholder='선호 장르 및 간단한 소개 (100자 이내)' maxlength='100' class='border p-1 w-full mb-2'></textarea>
+        <input required name='password' type='password' maxlength='4' placeholder='비밀번호 4자리' class='border p-1 w-full mb-2'/>
+      `;
+    } else {
+      container.innerHTML = `
+        <input required name='nickname' placeholder='오픈톡 닉네임 (필수)' class='border p-1 w-full mb-2'/>
+        <div class='mb-2'><label class='block mb-1'>구직 파트:</label>${checklistHTML}</div>
+        <input required name='age' placeholder='나이' class='border p-1 w-full mb-2'/>
+        ${regionSelectHTML}
+        <input required name='contact' placeholder='연락처 (필수)' class='border p-1 w-full mb-2'/>
+        <textarea name='intro' placeholder='선호 장르 및 간단한 소개 (100자 이내)' maxlength='100' class='border p-1 w-full mb-2'></textarea>
+        <input required name='password' type='password' maxlength='4' placeholder='비밀번호 4자리' class='border p-1 w-full mb-2'/>
+      `;
+    }
+  }
 }
