@@ -110,7 +110,11 @@
       },
 
       async loadJobs() {
-        const { data, error } = await this.supabase.from('jobs').select('*').order('created_at', { ascending: false });
+        const { data, error } = await this.supabase
+          .from('jobs')
+          .select('*')
+          .order('pinned', { ascending: false })
+          .order('created_at', { ascending: false });
         if (error) return console.error(error);
         this.jobs = data;
         this.refreshRegionOptions();
