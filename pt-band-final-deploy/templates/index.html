@@ -149,7 +149,7 @@
         // 모든 선택된 파트를 포함해야 함
         if (this.selectedParts.size > 0) {
           const parts = Array.isArray(job.part) ? job.part : (job.part || '').split(',');
-          if (![...this.selectedParts].every(p => parts.includes(p))) return false;
+          if (![...this.selectedParts].some(p => parts.includes(p))) return false;
         }
 
         return true;
