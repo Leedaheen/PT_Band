@@ -1,4 +1,4 @@
-export default function openForm() {
+export default function openMatchPopup() {
   const popup = document.createElement('div');
   popup.className = 'fixed top-1/2 left-1/2 bg-white p-4 rounded shadow z-50 max-w-sm w-full max-h-[90%] overflow-auto';
   popup.style.transform = 'translate(-50%, -50%)';
