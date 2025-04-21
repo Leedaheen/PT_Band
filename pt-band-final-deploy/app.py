@@ -67,11 +67,9 @@ def click(job_id):
 @app.route("/verify-password/<int:job_id>", methods=["POST"])
 def verify_password(job_id):
     try:
-        # JSON 파싱 강제
         req = request.get_json(force=True)
         pw = req.get("password", "").strip()
 
-        # DB에서 해당 글 조회
         resp = supabase.from_("jobs").select("*").eq("id", job_id).single().execute()
         if resp.error:
             print("[verify-password] Supabase error:", resp.error)
@@ -80,11 +78,9 @@ def verify_password(job_id):
         if not job:
             return jsonify(success=False, message="잘못된 데이터입니다."), 404
 
-        # 1) 사용자 비번 해시 체크
         if check_password_hash(job.get("password", ""), pw):
             return jsonify(success=True, job=job)
 
-        # 2) 관리자 비번 체크
         if pw == ADMIN_PASSWORD:
             return jsonify(success=True, job=job)
 
@@ -99,7 +95,6 @@ def update(job_id):
     req = request.get_json(force=True) or {}
     pw = req.get("password", "").strip()
 
-    # DB에서 해당 글 조회
     resp = supabase.from_("jobs").select("*").eq("id", job_id).single().execute()
     if resp.error:
         print("[update] Supabase error:", resp.error)
@@ -108,12 +103,10 @@ def update(job_id):
     if not job:
         return jsonify(success=False, message="잘못된 데이터입니다."), 404
 
-    # 인증 (관리자 또는 글 비번)
     is_admin = (pw == ADMIN_PASSWORD)
     if not is_admin and not check_password_hash(job.get("password", ""), pw):
         return jsonify(success=False, message="비밀번호가 일치하지 않습니다."), 403
 
-    # 업데이트 필드 구성
     parts = req.get("parts", [])
     updates = {
         "matched_parts": parts,
