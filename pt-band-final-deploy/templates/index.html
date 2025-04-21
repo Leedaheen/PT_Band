@@ -206,8 +206,10 @@
             div.appendChild(h2);
 
             const p0 = document.createElement('p');
-            p0.className = 'text-sm text-gray-600 mb-2';
-            p0.innerHTML = job.type==='구인'?`<strong>${partsHtml}</strong> 멤버가 필요해요!`:job.intro||'';
+            p0.className = 'text-sm text-black font-bold mb-2';
+            p0.innerHTML = job.type === '구인'
+              ? `<strong>[${partsHtml}]</strong> 멤버가 필요해요!`
+              : job.intro || '';
             div.appendChild(p0);
 
             const content = document.createElement('div');
