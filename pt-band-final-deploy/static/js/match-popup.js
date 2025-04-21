@@ -1,10 +1,6 @@
-// match-popup.js
-
 import openForm from '/static/js/form-popup.js';
 
 export default function openMatchPopup(jobId) {
-  const supabase = App.supabase;
-
   // 1) 비밀번호 입력 모달 생성
   const pwModal = document.createElement('div');
   pwModal.id = 'password-modal';
@@ -20,7 +16,7 @@ export default function openMatchPopup(jobId) {
     </div>`;
   document.body.appendChild(pwModal);
 
-  // 클릭 시 모달 닫기 & 내부 클릭 차단
+  // 모달 이벤트 바인딩
   const content = document.getElementById('password-modal-content');
   content.addEventListener('click', e => e.stopPropagation());
   pwModal.addEventListener('click', () => pwModal.remove());
@@ -51,7 +47,7 @@ export default function openMatchPopup(jobId) {
     } catch (err) {
       console.error('비밀번호 검증 오류:', err);
       alert(err.message || '비밀번호 검증 중 오류가 발생했습니다.');
-      pwModal.remove();
+      // 모달 닫지 않고 재입력 가능하도록 유지
     }
   });
 }
@@ -62,7 +58,6 @@ function renderEditForm(job, password) {
   formModal.id = 'match-modal';
   formModal.className = 'fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-center z-50';
 
-  // 파트 옵션 생성
   const allParts = Array.isArray(job.part) ? job.part : JSON.parse(job.part || '[]');
   const matched = Array.isArray(job.matched_parts) ? job.matched_parts : JSON.parse(job.matched_parts || '[]');
   const partOptions = allParts.map(part => `
@@ -78,7 +73,6 @@ function renderEditForm(job, password) {
         <input name="nickname" value="${job.nickname || ''}" placeholder="닉네임" class="border p-2 w-full" />
         <input name="age" value="${job.age || ''}" placeholder="연령대" class="border p-2 w-full" />
         <select name="region" class="border p-2 w-full">
-          <!-- 옵션 반복 -->
           ${['경기도 > 평택시','경기도 > 오산시','경기도 > 화성시','경기도 > 안성시','서울특별시 > 강남구']
             .map(r => `<option value="${r}" ${job.region===r?'selected':''}>${r}</option>`)
             .join('')}
@@ -91,6 +85,12 @@ function renderEditForm(job, password) {
           <p class="font-semibold mb-2">매칭 완료할 파트 선택:</p>
           ${partOptions}
         </div>
+        <div class="mb-3">
+          <label class="inline-flex items-center">
+            <input type="checkbox" name="pinned" class="mr-2" ${job.pinned ? 'checked' : ''}/>
+            고정하기
+          </label>
+        </div>
         <div class="flex justify-end space-x-2">
           <button type="button" id="cancel-edit" class="bg-gray-500 text-white px-4 py-2 rounded">취소</button>
           <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded">저장</button>
@@ -99,7 +99,6 @@ function renderEditForm(job, password) {
     </div>`;
   document.body.appendChild(formModal);
 
-  // 이벤트 바인딩
   const content = document.getElementById('match-modal-content');
   content.addEventListener('click', e => e.stopPropagation());
   formModal.addEventListener('click', () => formModal.remove());
@@ -120,7 +119,8 @@ function renderEditForm(job, password) {
       location: form.get('location'),
       fee: form.get('fee'),
       contact: form.get('contact'),
-      intro: form.get('intro')
+      intro: form.get('intro'),
+      pinned: Boolean(form.get('pinned'))
     };
     try {
       const url = `${window.location.origin}/update/${job.id}`;
