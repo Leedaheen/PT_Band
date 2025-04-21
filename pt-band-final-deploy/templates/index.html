@@ -6,10 +6,6 @@
   <title>구인/구직 게시판</title>
   <link rel="icon" href="/static/favicon.ico" />
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
-  <script>
-    const SUPABASE_URL = 'https://dmjelqvpcsafottblvwx.supabase.co';
-    const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRtamVscXZwY3NhZm90dGJsdnd4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQxOTAzNDcsImV4cCI6MjA1OTc2NjM0N30.Z8NfPAVbUz7BIi9ifS9bdVFXUYj6dgu00pwP6THNA8A';
-  </script>
 </head>
 <body class="bg-gray-100 p-4">
   <div class="flex justify-between items-center mb-2">
@@ -35,6 +31,7 @@
   </div>
 
   <div class="flex mb-4 space-x-1 w-full sm:w-auto">
+    <!-- 파트별 버튼 (동적으로 생성해도 무방) -->
     <button class="part-filter-btn px-3 py-2 bg-blue-100 hover:bg-blue-300 rounded text-sm" data-part="보컬(남)">보컬(남)</button>
     <button class="part-filter-btn px-3 py-2 bg-blue-100 hover:bg-blue-300 rounded text-sm" data-part="보컬(여)">보컬(여)</button>
     <button class="part-filter-btn px-3 py-2 bg-blue-100 hover:bg-blue-300 rounded text-sm" data-part="드럼">드럼</button>
@@ -51,6 +48,10 @@
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
     import openForm from '/static/js/form-popup.js';
     import openMatchPopup from '/static/js/match-popup.js';
+
+    const SUPABASE_URL = 'https://dmjelqvpcsafottblvwx.supabase.co';
+    const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRtamVscXZwY3NhZm90dGJsdnd4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQxOTAzNDcsImV4cCI6MjA1OTc2NjM0N30.Z8NfPAVbUz7BIi9ifS9bdVFXUYj6dgu00pwP6THNA8A';
+
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON);
 
     const App = {
@@ -131,9 +132,16 @@
       applyFilters() {
         const region = document.getElementById('regionFilter').value;
         this.filteredJobs = this.jobs.filter(job => {
-          if (this.selectedType !== '매칭완료' && job.is_matched) return false;
-          if (this.selectedType === '매칭완료' ? !job.is_matched : (this.selectedType !== '전체' && job.type !== this.selectedType)) return false;
+          // 매칭완료 모드
+          if (this.selectedType === '매칭완료') {
+            if (!job.is_matched) return false;
+          } else {
+            if (job.is_matched) return false;
+            if (this.selectedType !== '전체' && job.type !== this.selectedType) return false;
+          }
+          // 지역 필터
           if (region !== '전체' && (job.region||'경기도 > 평택시') !== region) return false;
+          // 파트 필터 (교집합)
           if (this.selectedParts.size) {
             const parts = Array.isArray(job.part)?job.part:job.part.split(',');
             if (![...this.selectedParts].some(p=>parts.includes(p))) return false;
@@ -156,16 +164,15 @@
         jobs.forEach(job => {
           const parts = Array.isArray(job.part)?job.part:job.part.split(',');
           const partsHtml = parts.join(' / ');
+          const isMatched = job.is_matched;
 
-          if (job.is_matched) {
-            const div = document.createElement('div');
-            div.className = 'bg-white p-4 rounded shadow job-item';
-            if (job.pinned) {
-              const pin = document.createElement('span');
-              pin.className = 'absolute top-1 left-1 text-yellow-500';
-              pin.textContent = '📌';
-              div.appendChild(pin);
-            }
+          const div = document.createElement('div');
+          let classes = 'bg-white p-4 rounded shadow job-item';
+          if (!isMatched) classes += ' relative cursor-pointer';
+          if (job.pinned) classes += ' border-l-8 border-yellow-500';
+          div.className = classes;
+
+          if (isMatched) {
             const msg = job.type==='구인'
               ? `🎉 ${job.team} - ${partsHtml} 멤버 모집 완료!`
               : `🎉 ${job.nickname} - ${partsHtml} 밴드 합류 완료!`;
@@ -173,16 +180,7 @@
             p.className = 'text-center font-semibold';
             p.textContent = msg;
             div.appendChild(p);
-            container.appendChild(div);
           } else {
-            const div = document.createElement('div');
-            div.className = 'bg-white p-4 rounded shadow relative job-item cursor-pointer';
-            if (job.pinned) {
-              const pin = document.createElement('span');
-              pin.className = 'absolute top-1 left-1 text-yellow-500';
-              pin.textContent = '📌';
-              div.appendChild(pin);
-            }
             const h2 = document.createElement('h2');
             h2.className = 'text-lg font-semibold mb-1';
             h2.textContent = job.type==='구직'?`[${partsHtml}]`:`[${job.team||'팀명 미정'}]`;
@@ -191,6 +189,7 @@
             regionSpan.textContent = `(${job.region||'경기도 > 평택시'})`;
             h2.appendChild(regionSpan);
             div.appendChild(h2);
+
             const p0 = document.createElement('p');
             p0.className = 'text-sm text-gray-600 mb-2';
             p0.innerHTML = job.type==='구인'?`<strong>${partsHtml}</strong> 멤버가 필요해요!`:job.intro||'';
