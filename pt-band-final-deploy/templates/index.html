@@ -161,9 +161,17 @@
     },
 
       renderPage() {
-        const start = (this.currentPage-1)*this.pageSize;
-        this.renderJobs(this.filteredJobs.slice(start, start+this.pageSize));
-      },
+  const start = (this.currentPage - 1) * this.pageSize;
+
+  // pinned이 true인 글 먼저 정렬
+  const sortedJobs = [...this.filteredJobs].sort((a, b) => {
+    if (a.pinned && !b.pinned) return -1;
+    if (!a.pinned && b.pinned) return 1;
+    return new Date(b.created_at) - new Date(a.created_at); // 최신순
+  });
+
+  this.renderJobs(sortedJobs.slice(start, start + this.pageSize));
+  },
 
       renderJobs(jobs) {
         const container = document.getElementById('job-list');
