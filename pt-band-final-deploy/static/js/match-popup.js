@@ -32,7 +32,7 @@ export default function openMatchPopup(jobId) {
       return;
     }
     try {
-      const url = `${window.location.origin}/verify-password/${jobId}`;
+      const url = `/verify-password/${jobId}`;
       console.log('Verify URL:', url);
       const response = await fetch(url, {
         method: 'POST',
@@ -123,7 +123,7 @@ function renderEditForm(job, password) {
       pinned: Boolean(form.get('pinned'))
     };
     try {
-      const url = `${window.location.origin}/update/${job.id}`;
+      const url = `/verify-password/${jobId}`;
       console.log('Update URL:', url, payload);
       const response = await fetch(url, {
         method: 'POST',
