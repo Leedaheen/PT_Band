@@ -130,30 +130,35 @@
       },
 
       applyFilters() {
-        const region = document.getElementById('regionFilter').value;
-        this.filteredJobs = this.jobs.filter(job => {
-    // 1) 매칭완료 모드
-          if (this.selectedType === '매칭완료') {
-            if (!job.is_matched) return false;
-          } else {
-            if (job.is_matched) return false;                     // 매칭완료 된 글 제외
-            if (this.selectedType !== '전체'
-                && job.type !== this.selectedType) return false;  // 구인/구직 필터
-          }
-    // 2) 지역 필터
-          if (region !== '전체'
-              && (job.region || '경기도 > 평택시') !== region) return false;
-    // 3) 파트 필터 (교집합: 선택한 파트 중 하나라도 포함된 경우만 통과)
-          if (this.selectedParts.size) {
-            const parts = Array.isArray(job.part) ? job.part : job.part.split(',');
-            if (![...this.selectedParts].some(p => parts.includes(p))) return false;
-          }
-          return true;
-        });
-        this.currentPage = 1;
-        this.renderPage();
-        this.renderPagination();
-      },
+      const region = document.getElementById('regionFilter').value;
+      this.filteredJobs = this.jobs.filter(job => {
+        // 매칭완료는 단독 필터
+        if (this.selectedType === '매칭완료') {
+          return job.is_matched;
+        }
+
+        // 매칭되지 않은 글만 표시
+        if (job.is_matched) return false;
+
+        // 타입 필터 적용
+        if (this.selectedType !== '전체' && job.type !== this.selectedType) return false;
+
+        // 지역 필터 적용
+        if (region !== '전체' && (job.region || '경기도 > 평택시') !== region) return false;
+
+        // 모든 선택된 파트를 포함해야 함
+        if (this.selectedParts.size > 0) {
+          const parts = Array.isArray(job.part) ? job.part : (job.part || '').split(',');
+          if (![...this.selectedParts].every(p => parts.includes(p))) return false;
+        }
+
+        return true;
+      });
+
+      this.currentPage = 1;
+      this.renderPage();
+      this.renderPagination();
+    },
 
       renderPage() {
         const start = (this.currentPage-1)*this.pageSize;
