@@ -7,20 +7,15 @@ from supabase import create_client, Client
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "replace-with-your-secret")
 
-# Supabase 클라이언트 초기화
 SUPABASE_URL = os.environ["SUPABASE_URL"]
 SUPABASE_KEY = os.environ["SUPABASE_SERVICE_KEY"]
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# 관리자 암호 로드 (환경변수 없으면 'admin1234')
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "admin1234")
 
 @app.route("/")
 def index():
-    resp = supabase.from_("jobs").select("*") \
-        .order("pinned", desc=True) \
-        .order("created_at", desc=True) \
-        .execute()
+    resp = supabase.from_("jobs").select("*").order("pinned", desc=True).order("created_at", desc=True).execute()
     jobs = resp.data or []
     locations = sorted({job.get("region", "경기도 > 평택시") for job in jobs})
     types = ["전체", "구인", "구직"]
@@ -39,7 +34,7 @@ def add_job():
         "clicks": 0,
         "matched_parts": [],
         "is_matched": False,
-        "pinned": False
+        "pinned": item.get("pinned", False)
     })
 
     resp = supabase.from_("jobs").insert([item]).execute()
@@ -67,17 +62,20 @@ def verify_password(job_id):
         req = request.get_json(force=True)
         pw = req.get("password", "").strip()
 
+        if job_id == 0:
+            is_admin = (pw == ADMIN_PASSWORD)
+            return jsonify(success=True, is_admin=is_admin)
+
         resp = supabase.from_("jobs").select("*").eq("id", job_id).single().execute()
         job = resp.data
-
         if not job:
             return jsonify(success=False, message="잘못된 데이터입니다."), 404
 
         if check_password_hash(job.get("password", ""), pw):
-            return jsonify(success=True, job=job)
+            return jsonify(success=True, job=job, is_admin=False)
 
         if pw == ADMIN_PASSWORD:
-            return jsonify(success=True, job=job)
+            return jsonify(success=True, job=job, is_admin=True)
 
         return jsonify(success=False, message="비밀번호가 일치하지 않습니다."), 403
 
