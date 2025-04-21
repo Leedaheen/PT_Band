@@ -34,6 +34,8 @@ export default function openForm() {
   formTypeSelect.addEventListener('change', () => renderFormFields(formContent, formTypeSelect.value));
   renderFormFields(formContent, formTypeSelect.value);
 
+  const adminToggle = popup.querySelector('#admin-pin-toggle');
+
   popup.querySelector('#new-post-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const form = new FormData(e.target);
@@ -41,6 +43,25 @@ export default function openForm() {
 
     if (password.length !== 4) {
       return alert("비밀번호는 4자리여야 합니다.");
+    }
+
+    // 관리자 여부 확인 요청
+    let isAdmin = false;
+    try {
+      const verify = await fetch(`/verify-password/0`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password })
+      });
+      const result = await verify.json();
+      isAdmin = result.is_admin === true;
+      if (isAdmin) {
+        adminToggle.classList.remove('hidden');
+      } else {
+        adminToggle.classList.add('hidden');
+      }
+    } catch (e) {
+      console.warn('관리자 여부 확인 실패');
     }
 
     const payload = {
@@ -55,7 +76,7 @@ export default function openForm() {
       intro:      form.get('intro')    || null,
       password:   password,
       part:       form.getAll('part'),
-      pinned:     form.get('pinned') === 'on'
+      pinned:     isAdmin && form.get('pinned') === 'on'
     };
 
     try {
