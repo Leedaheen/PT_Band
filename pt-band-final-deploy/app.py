@@ -17,7 +17,6 @@ ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "admin1234")
 
 @app.route("/")
 def index():
-    # 고정 글 우선 정렬 후 최신순
     resp = supabase.from_("jobs").select("*") \
         .order("pinned", desc=True) \
         .order("created_at", desc=True) \
@@ -44,8 +43,7 @@ def add_job():
     })
 
     resp = supabase.from_("jobs").insert([item]).execute()
-    if resp.error or not resp.data:
-        print("[add_job] Supabase error:", resp.error)
+    if not resp.data:
         return jsonify(success=False, message="등록 실패"), 500
     return jsonify(success=True)
 
@@ -56,8 +54,7 @@ def click(job_id):
         return jsonify(success=True)
 
     resp = supabase.from_("jobs").update({"clicks": supabase.postgrest.raw("clicks + 1")}).eq("id", job_id).execute()
-    if resp.error or not resp.data:
-        print("[click] Supabase error:", resp.error)
+    if not resp.data:
         return jsonify(success=False, message="조회수 업데이트 실패"), 500
 
     clicked.append(str(job_id))
@@ -71,10 +68,8 @@ def verify_password(job_id):
         pw = req.get("password", "").strip()
 
         resp = supabase.from_("jobs").select("*").eq("id", job_id).single().execute()
-        if resp.error:
-            print("[verify-password] Supabase error:", resp.error)
-            return jsonify(success=False, message="DB 조회 실패"), 500
         job = resp.data
+
         if not job:
             return jsonify(success=False, message="잘못된 데이터입니다."), 404
 
@@ -86,45 +81,49 @@ def verify_password(job_id):
 
         return jsonify(success=False, message="비밀번호가 일치하지 않습니다."), 403
 
-    except Exception:
-        import traceback; traceback.print_exc()
-        return jsonify(success=False, message="서버 오류 발생"), 500
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify(success=False, message=f"서버 오류: {str(e)}"), 500
 
 @app.route("/update/<int:job_id>", methods=["POST"])
 def update(job_id):
-    req = request.get_json(force=True) or {}
-    pw = req.get("password", "").strip()
+    try:
+        req = request.get_json(force=True) or {}
+        pw = req.get("password", "").strip()
 
-    resp = supabase.from_("jobs").select("*").eq("id", job_id).single().execute()
-    if resp.error:
-        print("[update] Supabase error:", resp.error)
-        return jsonify(success=False, message="DB 조회 실패"), 500
-    job = resp.data
-    if not job:
-        return jsonify(success=False, message="잘못된 데이터입니다."), 404
+        resp = supabase.from_("jobs").select("*").eq("id", job_id).single().execute()
+        job = resp.data
 
-    is_admin = (pw == ADMIN_PASSWORD)
-    if not is_admin and not check_password_hash(job.get("password", ""), pw):
-        return jsonify(success=False, message="비밀번호가 일치하지 않습니다."), 403
+        if not job:
+            return jsonify(success=False, message="잘못된 데이터입니다."), 404
 
-    parts = req.get("parts", [])
-    updates = {
-        "matched_parts": parts,
-        "is_matched": len(parts) == len(job.get("part", [])),
-        "updated_at": datetime.datetime.utcnow().isoformat()
-    }
-    for key in ["team", "nickname", "age", "region", "location", "fee", "contact", "intro"]:
-        if key in req:
-            updates[key] = req[key]
-    if is_admin and "pinned" in req:
-        updates["pinned"] = req["pinned"]
+        is_admin = (pw == ADMIN_PASSWORD)
+        if not is_admin and not check_password_hash(job.get("password", ""), pw):
+            return jsonify(success=False, message="비밀번호가 일치하지 않습니다."), 403
 
-    upd = supabase.from_("jobs").update(updates).eq("id", job_id).execute()
-    if upd.error or not upd.data:
-        print("[update] Supabase error:", upd.error)
-        return jsonify(success=False, message="수정 실패"), 500
+        parts = req.get("parts", [])
+        updates = {
+            "matched_parts": parts,
+            "is_matched": len(parts) == len(job.get("part", [])),
+            "updated_at": datetime.datetime.utcnow().isoformat()
+        }
+        for key in ["team", "nickname", "age", "region", "location", "fee", "contact", "intro"]:
+            if key in req:
+                updates[key] = req[key]
+        if is_admin and "pinned" in req:
+            updates["pinned"] = req["pinned"]
 
-    return jsonify(success=True, message="수정이 완료되었습니다.")
+        upd = supabase.from_("jobs").update(updates).eq("id", job_id).execute()
+        if not upd.data:
+            return jsonify(success=False, message="수정 실패"), 500
+
+        return jsonify(success=True, message="수정이 완료되었습니다.")
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify(success=False, message=f"서버 오류: {str(e)}"), 500
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=True)
