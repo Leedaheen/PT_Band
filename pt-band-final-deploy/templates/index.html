@@ -213,13 +213,17 @@
             const content = document.createElement('div');
             content.className = 'expand-content hidden text-sm text-gray-600 mb-2';
             [
-              {label:'오픈톡 닉네임', value:job.nickname||'-'},
-              {label:'위치', value:job.location||'-'},
-              {label:'나이', value:job.age||'-'},
-              {label:'소개', value:job.intro||'-'}
-            ].forEach(item=>{
+              { label: '오픈톡 닉네임', value: job.nickname || '-' },
+              { label: '위치',          value: job.location || '-' },
+              { label: '나이',          value: job.age || '-' },
+              { label: '소개',          value: job.intro || '-' }
+            ].forEach(item => {
               const p = document.createElement('p');
-              p.innerHTML = `<strong>${item.label}:</strong> ${item.value}`;
+              if (item.label === '소개') {
+                p.innerHTML = `<span class="font-bold text-blue-900">${item.value}</span>`;
+              } else {
+                p.innerHTML = `<strong>${item.label}:</strong> ${item.value}`;
+              }
               content.appendChild(p);
             });
             div.appendChild(content);
