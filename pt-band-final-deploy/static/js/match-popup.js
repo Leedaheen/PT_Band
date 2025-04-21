@@ -1,144 +1,140 @@
-import openForm from '/static/js/form-popup.js';
+// match-popup.js
+// 매칭 상태 변경 + 게시글 수정 팝업 (관리자 핀 고정 기능 포함)
+// ---------------------------------------------------------
+// 1) 비밀번호 확인 → 2) 글 정보/권한 가져오기 → 3) 수정 & 매칭 완료 → 4) 저장
+// ---------------------------------------------------------
 
 export default function openMatchPopup(jobId) {
-  // 1) 비밀번호 입력 모달 생성
+  // ---------- 1) 비밀번호 입력 모달 ----------
   const pwModal = document.createElement('div');
   pwModal.id = 'password-modal';
   pwModal.className = 'fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-center z-50';
   pwModal.innerHTML = `
     <div id="password-modal-content" class="bg-white p-6 rounded shadow-lg max-w-sm w-full">
       <h2 class="text-xl font-semibold mb-4">비밀번호 확인</h2>
-      <input id="password-input" type="password" placeholder="비밀번호" class="border p-2 w-full mb-4" />
+      <input id="password-input" type="password" placeholder="비밀번호 4자리" maxlength="4" class="border p-2 w-full mb-4" />
       <div class="flex justify-end space-x-2">
         <button id="pw-cancel" class="bg-gray-500 text-white px-4 py-2 rounded">취소</button>
-        <button id="pw-submit" class="bg-blue-500 text-white px-4 py-2 rounded">확인</button>
+        <button id="pw-submit" class="bg-blue-600 text-white px-4 py-2 rounded">확인</button>
       </div>
     </div>`;
   document.body.appendChild(pwModal);
 
-  // 모달 이벤트 바인딩
-  const content = document.getElementById('password-modal-content');
-  content.addEventListener('click', e => e.stopPropagation());
-  pwModal.addEventListener('click', () => pwModal.remove());
-  document.getElementById('pw-cancel').addEventListener('click', e => { e.stopPropagation(); pwModal.remove(); });
+  // 모달 외부 클릭 닫기 & 취소 버튼
+  pwModal.addEventListener('click', e => {
+    if (e.target === pwModal || e.target.id === 'pw-cancel') pwModal.remove();
+  });
+  // 내용 클릭 전파 방지
+  document.getElementById('password-modal-content').addEventListener('click', e => e.stopPropagation());
 
-  // 2) 비밀번호 검증
-  document.getElementById('pw-submit').addEventListener('click', async e => {
-    e.stopPropagation();
-    const password = document.getElementById('password-input').value.trim();
-    console.log('입력된 비밀번호:', password);
-    if (!password) {
-      alert('비밀번호를 입력해주세요.');
-      return;
-    }
+  // ---------- 2) 비밀번호 검증 ----------
+  document.getElementById('pw-submit').addEventListener('click', async () => {
+    const password = (document.getElementById('password-input').value || '').trim();
+    if (password.length !== 4) return alert('비밀번호는 4자리여야 합니다.');
+
     try {
-      const url = `${window.location.origin}/verify-password/${jobId}`;
-      console.log('Verify URL:', url);
-      const response = await fetch(url, {
+      const res = await fetch(`/verify-password/${jobId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password })
       });
-      const data = await response.json();
-      console.log('verify-password 응답:', response.status, data);
-      if (!response.ok) throw new Error(data.message || '비밀번호 검증 실패');
+      const { success, message, job, is_admin } = await res.json();
+      if (!success) throw new Error(message || '비밀번호가 일치하지 않습니다.');
+
       pwModal.remove();
-      renderEditForm(data.job, password);
+      renderEditForm(job, password, is_admin);
     } catch (err) {
-      console.error('비밀번호 검증 오류:', err);
-      alert(err.message || '비밀번호 검증 중 오류가 발생했습니다.');
-      // 모달 닫지 않고 재입력 가능하도록 유지
+      alert(err.message);
     }
   });
 }
 
-// 3) 글 수정 + 매칭 상태 변경 폼 렌더링
-function renderEditForm(job, password) {
-  const formModal = document.createElement('div');
-  formModal.id = 'match-modal';
-  formModal.className = 'fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-center z-50';
+// ---------- 3) 글 수정 + 매칭 상태 변경 폼 ----------
+function renderEditForm(job, password, isAdmin) {
+  const modal = document.createElement('div');
+  modal.id = 'match-modal';
+  modal.className = 'fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-center z-50';
 
-  const allParts = Array.isArray(job.part) ? job.part : JSON.parse(job.part || '[]');
-  const matched = Array.isArray(job.matched_parts) ? job.matched_parts : JSON.parse(job.matched_parts || '[]');
-  const partOptions = allParts.map(part => `
-    <label class="block mb-1">
-      <input type="checkbox" name="match" value="${part}" ${matched.includes(part) ? 'checked' : ''}/> ${part}
+  // 파트 배열 변환
+  const allParts = Array.isArray(job.part) ? job.part : (job.part ? JSON.parse(job.part) : []);
+  const matchedParts = Array.isArray(job.matched_parts) ? job.matched_parts : (job.matched_parts ? JSON.parse(job.matched_parts) : []);
+
+  // 파트 체크박스 HTML
+  const partCheckboxes = allParts.map(p => `
+    <label class="block mb-1 text-sm">
+      <input type="checkbox" name="matched_part" value="${p}" ${matchedParts.includes(p) ? 'checked' : ''} /> ${p}
     </label>`).join('');
 
-  formModal.innerHTML = `
+  modal.innerHTML = `
     <div id="match-modal-content" class="bg-white p-6 rounded shadow-lg max-w-md w-full overflow-auto">
-      <h2 class="text-xl font-semibold mb-4">글 수정 및 매칭</h2>
+      <h2 class="text-xl font-semibold mb-4">글 수정 / 매칭 상태 변경</h2>
       <form id="edit-form" class="space-y-3">
         <input name="team" value="${job.team || ''}" placeholder="밴드명" class="border p-2 w-full" />
         <input name="nickname" value="${job.nickname || ''}" placeholder="닉네임" class="border p-2 w-full" />
         <input name="age" value="${job.age || ''}" placeholder="연령대" class="border p-2 w-full" />
         <select name="region" class="border p-2 w-full">
           ${['경기도 > 평택시','경기도 > 오산시','경기도 > 화성시','경기도 > 안성시','서울특별시 > 강남구']
-            .map(r => `<option value="${r}" ${job.region===r?'selected':''}>${r}</option>`)
-            .join('')}
+            .map(r => `<option value="${r}" ${job.region===r?'selected':''}>${r}</option>`).join('')}
         </select>
-        <input name="location" value="${job.location || ''}" placeholder="위치" class="border p-2 w-full" />
+        <input name="location" value="${job.location || ''}" placeholder="연습실 위치" class="border p-2 w-full" />
         <input name="fee" value="${job.fee || ''}" placeholder="월 회비" class="border p-2 w-full" />
         <input name="contact" value="${job.contact || ''}" placeholder="연락처" class="border p-2 w-full" />
-        <textarea name="intro" placeholder="소개글" class="border p-2 w-full" maxlength="100">${job.intro || ''}</textarea>
+        <textarea name="intro" placeholder="소개글 (100자 이내)" maxlength="100" class="border p-2 w-full">${job.intro || ''}</textarea>
+
         <div>
           <p class="font-semibold mb-2">매칭 완료할 파트 선택:</p>
-          ${partOptions}
+          ${partCheckboxes}
         </div>
-        <div class="mb-3">
-          <label class="inline-flex items-center">
-            <input type="checkbox" name="pinned" class="mr-2" ${job.pinned ? 'checked' : ''}/>
-            고정하기
-          </label>
-        </div>
-        <div class="flex justify-end space-x-2">
+
+        ${isAdmin ? `<div class="mb-2"><label class="inline-flex items-center text-sm"><input type="checkbox" name="pinned" class="mr-2" ${job.pinned ? 'checked' : ''}/>📌 상단 고정</label></div>` : ''}
+
+        <div class="flex justify-end space-x-2 mt-4">
           <button type="button" id="cancel-edit" class="bg-gray-500 text-white px-4 py-2 rounded">취소</button>
           <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded">저장</button>
         </div>
       </form>
     </div>`;
-  document.body.appendChild(formModal);
 
-  const content = document.getElementById('match-modal-content');
-  content.addEventListener('click', e => e.stopPropagation());
-  formModal.addEventListener('click', () => formModal.remove());
-  document.getElementById('cancel-edit').addEventListener('click', e => { e.stopPropagation(); formModal.remove(); });
+  document.body.appendChild(modal);
 
-  // 4) 수정 저장
+  // 모달 바깥 클릭 닫기 & 취소
+  modal.addEventListener('click', e => {
+    if (e.target === modal || e.target.id === 'cancel-edit') modal.remove();
+  });
+  document.getElementById('match-modal-content').addEventListener('click', e => e.stopPropagation());
+
+  // ---------- 4) 저장 ----------
   document.getElementById('edit-form').addEventListener('submit', async e => {
     e.preventDefault();
-    const form = new FormData(e.target);
-    const selectedParts = Array.from(form.getAll('match'));
+    const fd = new FormData(e.target);
+    const matched = fd.getAll('matched_part');
+
     const payload = {
       password,
-      parts: selectedParts,
-      team: form.get('team'),
-      nickname: form.get('nickname'),
-      age: form.get('age'),
-      region: form.get('region'),
-      location: form.get('location'),
-      fee: form.get('fee'),
-      contact: form.get('contact'),
-      intro: form.get('intro'),
-      pinned: Boolean(form.get('pinned'))
+      team:       fd.get('team'),
+      nickname:   fd.get('nickname'),
+      age:        fd.get('age'),
+      region:     fd.get('region'),
+      location:   fd.get('location'),
+      fee:        fd.get('fee'),
+      contact:    fd.get('contact'),
+      intro:      fd.get('intro'),
+      matched_parts: matched,
+      pinned:     isAdmin && fd.get('pinned') === 'on'
     };
+
     try {
-      const url = `${window.location.origin}/update/${job.id}`;
-      console.log('Update URL:', url, payload);
-      const response = await fetch(url, {
-        method: 'POST',
+      const res = await fetch(`/update/${job.id}`, {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-      const result = await response.json();
-      console.log('update 응답:', response.status, result);
-      if (!response.ok) throw new Error(result.message || '수정 실패');
-      alert('수정 및 매칭이 완료되었습니다.');
-      formModal.remove();
-      // 업데이트 후 리스트 갱신
-      App.loadJobs();
+      const { success, message } = await res.json();
+      if (!success) throw new Error(message || '저장 실패');
+      alert('저장되었습니다.');
+      modal.remove();
+      if (window.App) window.App.loadJobs();
     } catch (err) {
-      console.error('업데이트 오류:', err);
       alert(err.message);
     }
   });
