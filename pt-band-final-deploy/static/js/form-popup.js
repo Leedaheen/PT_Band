@@ -1,8 +1,4 @@
-// static/js/form-popup.js
-export default function openForm(supabase) {
-  console.log("팝업창 열림", supabase);
-
-  // 1) 팝업 컨테이너 생성
+export default function openForm() {
   const popup = document.createElement('div');
   popup.className = 'fixed top-1/2 left-1/2 bg-white p-4 rounded shadow z-50 max-w-sm w-full max-h-[90%] overflow-auto';
   popup.style.transform = 'translate(-50%, -50%)';
@@ -26,22 +22,18 @@ export default function openForm(supabase) {
     </form>`;
   document.body.appendChild(popup);
 
-  // 2) 닫기 버튼
   popup.querySelector('#close-btn').addEventListener('click', () => popup.remove());
 
-  // 3) 동적 필드 렌더링 초기화
   const formTypeSelect = popup.querySelector('select[name="type"]');
-  const formContent    = popup.querySelector('#form-content');
+  const formContent = popup.querySelector('#form-content');
   formTypeSelect.addEventListener('change', () => renderFormFields(formContent, formTypeSelect.value));
   renderFormFields(formContent, formTypeSelect.value);
 
-  // 4) 폼 제출 핸들러
   popup.querySelector('#new-post-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const form = new FormData(e.target);
     const password = form.get('password').trim();
 
-    // 비밀번호 유효성 검사
     if (password.length !== 4) {
       return alert("비밀번호는 4자리여야 합니다.");
     }
@@ -57,31 +49,30 @@ export default function openForm(supabase) {
       contact:    form.get('contact')  || null,
       intro:      form.get('intro')    || null,
       password:   password,
-      part:       form.getAll('part'),
-      created_at: new Date().toISOString(),
-      clicks:     0,
-      is_matched: false,
-      pinned:     false
+      part:       form.getAll('part')
     };
 
-    console.log("🔽 등록할 데이터:", payload);
-    const { data, error } = await supabase
-      .from('jobs')
-      .insert([payload])
-      .select();
+    try {
+      const response = await fetch('/add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const result = await response.json();
 
-    console.log("🔼 Supabase 응답:", { data, error });
-
-    if (error) {
-      console.error("❌ 등록 실패:", error);
-      alert('등록 실패: ' + (error.message || JSON.stringify(error)));
-    } else {
-      console.log("✅ 등록 성공, 삽입된 행:", data);
-      popup.remove();
+      if (!response.ok || !result.success) {
+        alert('등록 실패: ' + (result.message || '오류 발생'));
+      } else {
+        alert('등록 성공!');
+        popup.remove();
+        if (window.App) window.App.loadJobs();
+      }
+    } catch (err) {
+      console.error('등록 오류:', err);
+      alert('서버 오류: ' + err.message);
     }
   });
 
-  // 5) 동적 필드 렌더링 함수
   function renderFormFields(container, type) {
     const checklistHTML = ['보컬(남)', '보컬(여)', '드럼', '베이스', '기타', '키보드', '그 외']
       .map(p => `<label class='mr-2'><input type='checkbox' name='part' value='${p}' class='mr-1'/>${p}</label>`)
@@ -101,29 +92,28 @@ export default function openForm(supabase) {
       container.innerHTML = `
         <input required name='team' placeholder='밴드명 필수' class='border p-1 w-full mb-2'/>
         <input required name='nickname' placeholder='오픈톡 닉네임 필수' class='border p-1 w-full mb-2'/>
-        <input        name='age'      placeholder='멤버 연령대' class='border p-1 w-full mb-2'/>
+        <input name='age' placeholder='멤버 연령대' class='border p-1 w-full mb-2'/>
         <div class='mb-2'>
           <label class='block mb-1'>구인 파트:</label>
           <div class='grid grid-cols-2 gap-4'>${checklistHTML}</div>
         </div>
         <input required name='location' placeholder='연습실 위치 (필수)' class='border p-1 w-full mb-2'/>
         ${regionSelectHTML}
-        <input        name='fee'       placeholder='월 회비 선택' class='border p-1 w-full mb-2'/>
-        <input required name='contact'  placeholder='연락처 필수' class='border p-1 w-full mb-2'/>
-        <textarea     name='intro'    placeholder='선호 장르 및 간단한 소개 (100자 이내)' maxlength='100' class='border p-1 w-full mb-2'></textarea>
+        <input name='fee' placeholder='월 회비 선택' class='border p-1 w-full mb-2'/>
+        <input required name='contact' placeholder='연락처 필수' class='border p-1 w-full mb-2'/>
+        <textarea name='intro' placeholder='선호 장르 및 간단한 소개 (100자 이내)' maxlength='100' class='border p-1 w-full mb-2'></textarea>
         <input required name='password' type='password' maxlength='4' placeholder='비밀번호 4자리' class='border p-1 w-full mb-2'/>
       `;
     } else {
       container.innerHTML = `
         <input required name='nickname' placeholder='오픈톡 닉네임 (필수)' class='border p-1 w-full mb-2'/>
         <div class='mb-2'><label class='block mb-1'>구직 파트:</label>${checklistHTML}</div>
-        <input required name='age'      placeholder='나이' class='border p-1 w-full mb-2'/>
+        <input required name='age' placeholder='나이' class='border p-1 w-full mb-2'/>
         ${regionSelectHTML}
-        <input required name='contact'  placeholder='연락처 (필수)' class='border p-1 w-full mb-2'/>
-        <textarea     name='intro'     placeholder='선호 장르 및 간단한 소개 (100자 이내)' maxlength='100' class='border p-1 w-full mb-2'></textarea>
+        <input required name='contact' placeholder='연락처 (필수)' class='border p-1 w-full mb-2'/>
+        <textarea name='intro' placeholder='선호 장르 및 간단한 소개 (100자 이내)' maxlength='100' class='border p-1 w-full mb-2'></textarea>
         <input required name='password' type='password' maxlength='4' placeholder='비밀번호 4자리' class='border p-1 w-full mb-2'/>
       `;
     }
   }
 }
-
