@@ -8,8 +8,9 @@
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
 </head>
 <body class="bg-gray-100 p-4">
+  <!-- ───────────────────────────── 헤더 ───────────────────────────── -->
   <div class="flex justify-between items-center mb-2">
-    <h1 class="text-xl font-bold">🚀평택 직장인/취미 밴드 구인구직 (BETA) </h1>
+    <h1 class="text-xl font-bold">🚀평택 직장인/취미 밴드 구인구직 (BETA)</h1>
     <button id="open-form-btn" class="text-white bg-blue-600 hover:bg-blue-700 px-3 py-1 text-sm rounded">+글 등록</button>
   </div>
 
@@ -18,6 +19,7 @@
     <p class="mt-1">모든 닉네임은 오픈톡 상 닉네임과 일치시켜주세요 (예: 홍길동/보컬/30 → <strong>홍길동</strong>)</p>
   </div>
 
+  <!-- ───────────────────────────── 상단 필터 ───────────────────────────── -->
   <div class="flex justify-between items-center mb-4">
     <div class="flex space-x-2">
       <button class="filter-btn px-3 py-2 bg-gray-200 hover:bg-gray-300 rounded text-sm" data-filter="전체">전체</button>
@@ -30,8 +32,8 @@
     </select>
   </div>
 
+  <!-- ───────────────────────────── 파트별 필터 ───────────────────────────── -->
   <div class="flex mb-4 space-x-1 w-full sm:w-auto">
-    <!-- 파트별 버튼 (동적으로 생성해도 무방) -->
     <button class="part-filter-btn px-3 py-2 bg-blue-100 hover:bg-blue-300 rounded text-sm" data-part="보컬(남)">보컬(남)</button>
     <button class="part-filter-btn px-3 py-2 bg-blue-100 hover:bg-blue-300 rounded text-sm" data-part="보컬(여)">보컬(여)</button>
     <button class="part-filter-btn px-3 py-2 bg-blue-100 hover:bg-blue-300 rounded text-sm" data-part="드럼">드럼</button>
@@ -41,17 +43,29 @@
     <button class="part-filter-btn px-3 py-2 bg-blue-100 hover:bg-blue-300 rounded text-sm" data-part="그 외">그 외</button>
   </div>
 
+  <!-- ───────────────────────────── 목록 & 페이지네이션 ───────────────────────────── -->
   <div id="job-list" class="space-y-6 mb-4"></div>
   <div id="pagination" class="mt-4 flex justify-center space-x-2"></div>
 
+  <!-- ───────────────────────────── 스크립트 ───────────────────────────── -->
   <script type="module">
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
     import openForm from '/static/js/form-popup.js';
     import openMatchPopup from '/static/js/match-popup.js';
 
-    const SUPABASE_URL = 'https://dmjelqvpcsafottblvwx.supabase.co';
-    const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRtamVscXZwY3NhZm90dGJsdnd4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQxOTAzNDcsImV4cCI6MjA1OTc2NjM0N30.Z8NfPAVbUz7BIi9ifS9bdVFXUYj6dgu00pwP6THNA8A';
+    // 파트별 이모지 매핑
+    const emojiMap = {
+      '보컬(남)': '🎤 ',
+      '보컬(여)': '🎤 ',
+      '드럼': '🥁 ',
+      '베이스': '🎸 ',
+      '기타': '🎸 ',
+      '키보드': '🎹 ',
+      '그 외': '🎶 '
+    };
 
+    const SUPABASE_URL  = 'https://dmjelqvpcsafottblvwx.supabase.co';
+    const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRtamVscXZwY3NhZm90dGJsdnd4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQxOTAzNDcsImV4cCI6MjA1OTc2NjM0N30.Z8NfPAVbUz7BIi9ifS9bdVFXUYj6dgu00pwP6THNA8A';
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON);
 
     const App = {
@@ -63,39 +77,49 @@
       selectedType: '전체',
       selectedParts: new Set(),
 
+      /* ───────────── 초기화 ───────────── */
       init() {
         this.loadJobs();
         this.initRealtime();
+
+        // 글 등록 팝업
         document.getElementById('open-form-btn').addEventListener('click', () => openForm(this.supabase));
+
+        // 상단 타입 필터
         document.querySelectorAll('.filter-btn').forEach(btn => btn.addEventListener('click', () => {
           this.selectedType = btn.dataset.filter;
           this.applyFilters();
           this.updateActiveFilter(btn);
         }));
+
+        // 지역 필터
         document.getElementById('regionFilter').addEventListener('change', () => this.applyFilters());
+
+        // 파트 필터
         document.querySelectorAll('.part-filter-btn').forEach(btn => btn.addEventListener('click', () => {
           const part = btn.dataset.part;
           if (this.selectedParts.has(part)) {
             this.selectedParts.delete(part);
-            btn.classList.replace('bg-blue-500','bg-blue-100');
-            btn.classList.replace('text-white','text-black');
+            btn.classList.replace('bg-blue-500', 'bg-blue-100');
+            btn.classList.replace('text-white',  'text-black');
           } else {
             this.selectedParts.add(part);
-            btn.classList.replace('bg-blue-100','bg-blue-500');
-            btn.classList.replace('text-black','text-white');
+            btn.classList.replace('bg-blue-100', 'bg-blue-500');
+            btn.classList.replace('text-black',  'text-white');
           }
           this.applyFilters();
         }));
 
+        // 목록 내부 이벤트 (토글·매칭상태 변경)
         document.getElementById('job-list').addEventListener('click', e => {
           const matchBtn = e.target.closest('.match-btn');
           if (matchBtn) {
             openMatchPopup(Number(matchBtn.dataset.id));
             return;
           }
-          const item = e.target.closest('.job-item');
+          const item   = e.target.closest('.job-item');
           if (!item) return;
-          const content = item.querySelector('.expand-content');
+          const content  = item.querySelector('.expand-content');
           const toggleEl = item.querySelector('.expand-toggle');
           if (content && toggleEl) {
             const hidden = content.classList.toggle('hidden');
@@ -104,17 +128,20 @@
         });
       },
 
+      /* ───────────── 실시간 구독 ───────────── */
       initRealtime() {
-        this.supabase.channel('public:jobs')
+        this.supabase
+          .channel('public:jobs')
           .on('postgres_changes', { event: '*', schema: 'public', table: 'jobs' }, () => this.loadJobs())
           .subscribe();
       },
 
+      /* ───────────── 데이터 로드 ───────────── */
       async loadJobs() {
         const { data, error } = await this.supabase
           .from('jobs')
           .select('*')
-          .order('pinned', { ascending: false })
+          .order('pinned',     { ascending: false })
           .order('created_at', { ascending: false });
         if (error) return console.error(error);
         this.jobs = data;
@@ -122,165 +149,28 @@
         this.applyFilters();
       },
 
+      /* ───────────── 지역 셀렉트 옵션 갱신 ───────────── */
       refreshRegionOptions() {
         const sel = document.getElementById('regionFilter');
         sel.innerHTML = '<option value="전체">전체</option>' +
-          Array.from(new Set(this.jobs.map(j => j.region||'경기도 > 평택시')))
+          Array.from(new Set(this.jobs.map(j => j.region || '경기도 > 평택시')))
             .map(r => `<option>${r}</option>`).join('');
       },
 
+      /* ───────────── 필터 적용 ───────────── */
       applyFilters() {
-      const region = document.getElementById('regionFilter').value;
-      this.filteredJobs = this.jobs.filter(job => {
-        // 매칭완료는 단독 필터
-        if (this.selectedType === '매칭완료') {
-          return job.is_matched;
-        }
-
-        // 매칭되지 않은 글만 표시
-        if (job.is_matched) return false;
-
-        // 타입 필터 적용
-        if (this.selectedType !== '전체' && job.type !== this.selectedType) return false;
-
-        // 지역 필터 적용
-        if (region !== '전체' && (job.region || '경기도 > 평택시') !== region) return false;
-
-        // 모든 선택된 파트를 포함해야 함
-        if (this.selectedParts.size > 0) {
-          const parts = Array.isArray(job.part) ? job.part : (job.part || '').split(',');
-          if (![...this.selectedParts].some(p => parts.includes(p))) return false;
-        }
-
-        return true;
-      });
-
-      this.currentPage = 1;
-      this.renderPage();
-      this.renderPagination();
-    },
-
-      renderPage() {
-  const start = (this.currentPage - 1) * this.pageSize;
-
-  // pinned이 true인 글 먼저 정렬
-  const sortedJobs = [...this.filteredJobs].sort((a, b) => {
-    if (a.pinned && !b.pinned) return -1;
-    if (!a.pinned && b.pinned) return 1;
-    return new Date(b.created_at) - new Date(a.created_at); // 최신순
-  });
-
-  this.renderJobs(sortedJobs.slice(start, start + this.pageSize));
-  },
-
-      renderJobs(jobs) {
-        const container = document.getElementById('job-list');
-        container.innerHTML = '';
-        jobs.forEach(job => {
-          const parts = Array.isArray(job.part)?job.part:job.part.split(',');
-          const partsHtml = parts.join(' / ');
-          const isMatched = job.is_matched;
-
-          const div = document.createElement('div');
-          let classes = 'bg-white p-4 rounded shadow job-item';
-          if (!isMatched) classes += ' relative cursor-pointer';
-          if (job.pinned) classes += ' border-l-8 border-yellow-500';
-          div.className = classes;
-
-          if (isMatched) {
-            const msg = job.type==='구인'
-              ? `🎉 ${job.team} - ${partsHtml} 멤버 모집 완료!`
-              : `🎉 ${job.nickname} - ${partsHtml} 밴드 합류 완료!`;
-            const p = document.createElement('p');
-            p.className = 'text-center font-semibold';
-            p.textContent = msg;
-            div.appendChild(p);
-          } else {
-            const h2 = document.createElement('h2');
-            h2.className = 'text-lg font-semibold mb-1';
-            h2.textContent = job.type==='구직'?`[${partsHtml}]`:`[${job.team||'팀명 미정'}]`;
-            const regionSpan = document.createElement('span');
-            regionSpan.className = 'text-sm text-gray-500 ml-1';
-            regionSpan.textContent = `(${job.region||'경기도 > 평택시'})`;
-            h2.appendChild(regionSpan);
-            div.appendChild(h2);
-
-            const p0 = document.createElement('p');
-            p0.className = 'text-sm text-gray font-bold mb-2';
-            p0.innerHTML = job.type === '구인'
-              ? `<strong>${partsHtml}</strong> 멤버를 모집합니다!`
-              : job.intro || '';
-            div.appendChild(p0);
-
-            const content = document.createElement('div');
-            content.className = 'expand-content hidden text-sm text-gray-600 mb-2';
-            [
-              { label: '오픈톡 닉네임', value: job.nickname || '-' },
-              { label: '위치',          value: job.location || '-' },
-              { label: '나이',          value: job.age || '-' },
-              { label: '소개',          value: job.intro || '-' }
-            ].forEach(item => {
-              const p = document.createElement('p');
-              if (item.label === '소개') {
-                p.innerHTML = `<span class="font-bold text-blue-900">${item.value}</span>`;
-              } else {
-                p.innerHTML = `<strong>${item.label}:</strong> ${item.value}`;
-              }
-              content.appendChild(p);
-            });
-            div.appendChild(content);
-
-            const right = document.createElement('div');
-            right.className = 'text-right text-xs text-gray-400 mt-1';
-            const a = document.createElement('a');
-            a.href = `tel:${job.contact}`;
-            a.className = 'inline-block bg-blue-500 text-white px-1.5 py-[2px] rounded';
-            a.textContent = '연락처 확인';
-            a.addEventListener('click', () => this.incrementClick(job.id));
-            right.appendChild(a);
-            const pClicks = document.createElement('p');
-            pClicks.textContent = `👁 ${job.clicks||0}명 확인`;
-            right.appendChild(pClicks);
-            div.appendChild(right);
-
-            const toggle = document.createElement('span');
-            toggle.className = 'expand-toggle text-xs text-blue-500 cursor-pointer';
-            toggle.textContent = '▶ 더 보기';
-            div.appendChild(toggle);
-
-            const btn = document.createElement('button');
-            btn.className = 'match-btn text-xs text-gray-600 hover:underline absolute top-2 right-3';
-            btn.dataset.id = job.id;
-            btn.textContent = '매칭상태 변경';
-            div.appendChild(btn);
-
-            container.appendChild(div);
+        const region = document.getElementById('regionFilter').value;
+        this.filteredJobs = this.jobs.filter(job => {
+          // ① 매칭완료 탭은 is_matched=true 만!
+          if (this.selectedType === '매칭완료') {
+            return job.is_matched;
           }
-        });
-      },
 
-      renderPagination() {
-        const total = Math.ceil(this.filteredJobs.length/this.pageSize);
-        const p = document.getElementById('pagination'); p.innerHTML = '';
-        for (let i = 1; i <= total; i++) {
-          const b = document.createElement('button');
-          b.className = `px-3 py-1 border rounded ${i===this.currentPage?'bg-blue-600 text-white':'bg-white'}`;
-          b.textContent = i;
-          b.addEventListener('click', ()=>{ this.currentPage = i; this.renderPage(); });
-          p.appendChild(b);
-        }
-      },
+          // ② 매칭되지 않은 글만 (매칭완료 탭 제외)
+          if (job.is_matched) return false;
 
-      updateActiveFilter(btn) {
-        document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
-        btn.classList.add('active');
-      },
+          // ③ 타입 필터
+          if (this.selectedType !== '전체' && job.type !== this.selectedType) return false;
 
-      incrementClick(id) {
-        this.supabase.from('jobs').update({clicks: this.supabase.postgrest.raw('clicks+1')}).eq('id',id).then(()=>this.loadJobs());
-      }
-    };
-    window.App = App; App.init();
-  </script>
-</body>
-</html>
+          // ④ 지역 필터
+          if (region !== '전체' && (job.region || '경기도 > 평
