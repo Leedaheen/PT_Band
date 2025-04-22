@@ -56,7 +56,7 @@ def click(job_id):
     session['clicked'] = clicked
     return jsonify(success=True)
 
-@app.route("/verify-password/<int:job_id>", methods=["POST"])
+@app.route("/api/verify-password/<int:job_id>", methods=["POST"])
 def verify_password(job_id):
     try:
         req = request.get_json(force=True)
@@ -80,19 +80,17 @@ def verify_password(job_id):
         return jsonify(success=False, message="비밀번호가 일치하지 않습니다."), 403
 
     except Exception as e:
-        import traceback
-        traceback.print_exc()
+        import traceback; traceback.print_exc()
         return jsonify(success=False, message=f"서버 오류: {str(e)}"), 500
 
-@app.route("/update/<int:job_id>", methods=["POST"])
-def update(job_id):
+@app.route("/api/update/<int:job_id>", methods=["PATCH"])
+def update_job(job_id):
     try:
         req = request.get_json(force=True) or {}
         pw = req.get("password", "").strip()
 
         resp = supabase.from_("jobs").select("*").eq("id", job_id).single().execute()
         job = resp.data
-
         if not job:
             return jsonify(success=False, message="잘못된 데이터입니다."), 404
 
@@ -100,12 +98,14 @@ def update(job_id):
         if not is_admin and not check_password_hash(job.get("password", ""), pw):
             return jsonify(success=False, message="비밀번호가 일치하지 않습니다."), 403
 
-        parts = req.get("parts", [])
+        # 매칭 완료 파트 및 상단 고정 처리
+        matched = req.get("matched_parts", [])
         updates = {
-            "matched_parts": parts,
-            "is_matched": len(parts) == len(job.get("part", [])),
-            "updated_at": datetime.datetime.utcnow().isoformat()
+            "matched_parts": matched,
+            "is_matched":   len(matched) == len(job.get("part", [])),
+            "updated_at":   datetime.datetime.utcnow().isoformat()
         }
+
         for key in ["team", "nickname", "age", "region", "location", "fee", "contact", "intro"]:
             if key in req:
                 updates[key] = req[key]
@@ -119,8 +119,7 @@ def update(job_id):
         return jsonify(success=True, message="수정이 완료되었습니다.")
 
     except Exception as e:
-        import traceback
-        traceback.print_exc()
+        import traceback; traceback.print_exc()
         return jsonify(success=False, message=f"서버 오류: {str(e)}"), 500
 
 if __name__ == "__main__":
