@@ -67,7 +67,7 @@
       '그 외':    '🎶 '
     };
     const SUPABASE_URL = 'https://dmjelqvpcsafottblvwx.supabase.co';
-    const SUPABASE_ANON = 'YOUR_ANON_KEY';
+    const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRtamVscXZwY3NhZm90dGJsdnd4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQxOTAzNDcsImV4cCI6MjA1OTc2NjM0N30.Z8NfPAVbUz7BIi9ifS9bdVFXUYj6dgu00pwP6THNA8A';
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON);
 
     const App = {
@@ -115,12 +115,8 @@
 
         document.getElementById('job-list').addEventListener('click', e => {
           const matchBtn = e.target.closest('.match-btn');
-          if (matchBtn) {
-            openMatchPopup(Number(matchBtn.dataset.id));
-            return;
-          }
-          const item = e.target.closest('.job-item');
-          if (!item) return;
+          if (matchBtn) { openMatchPopup(Number(matchBtn.dataset.id)); return; }
+          const item = e.target.closest('.job-item'); if (!item) return;
           const content = item.querySelector('.expand-content');
           const toggleEl = item.querySelector('.expand-toggle');
           if (content && toggleEl) {
@@ -138,6 +134,29 @@
       },
 
       async loadJobs() {
+        // 데이터 로드 및 렌더링
+        try {
+          const { data, error } = await this.supabase
+            .from('jobs')
+            .select('*')
+            .order('pinned', { ascending: false })
+            .order('created_at', { ascending: false });
+          if (error) throw error;
+          this.jobs = data;
+          this.refreshRegionOptions();
+          this.applyFilters();
+        } catch (err) {
+          console.error('Error loading jobs:', err);
+        }
+      }
+          console.log('loadJobs result:', { data, error });
+          if (error) throw error;
+          this.jobs = data;
+          this.refreshRegionOptions();
+          this.applyFilters();
+        } catch (err) {
+          console.error('Error in loadJobs:', err);
+        }
         const { data, error } = await this.supabase
           .from('jobs')
           .select('*')
@@ -166,19 +185,11 @@
           if (region !== '전체' && (job.region || '경기도 > 평택시') !== region) return false;
           if (this.selectedParts.size > 0) {
             let partsArr;
-            if (Array.isArray(job.part)) {
-              partsArr = job.part;
-            } else if (typeof job.part === 'string' && job.part.trim().startsWith('[')) {
-              try {
-                partsArr = JSON.parse(job.part);
-              } catch {
-                partsArr = job.part.slice(1, -1)
-                  .split(',')
-                  .map(p => p.trim().replace(/^"|"$/g, ''));  
-              }
-            } else {
-              partsArr = job.part ? job.part.split(',').map(p => p.trim()) : [];
-            }
+            if (Array.isArray(job.part)) partsArr = job.part;
+            else if (typeof job.part === 'string' && job.part.trim().startsWith('[')) {
+              try { partsArr = JSON.parse(job.part); } catch {
+                partsArr = job.part.slice(1, -1).split(',').map(p => p.trim().replace(/^"|"$/g, '')); }
+            } else partsArr = job.part ? job.part.split(',').map(p => p.trim()) : [];
             if (![...this.selectedParts].some(p => partsArr.includes(p))) return false;
           }
           return true;
@@ -203,20 +214,12 @@
         container.innerHTML = '';
         jobs.forEach(job => {
           let parts = [];
-          if (Array.isArray(job.part)) {
-            parts = job.part;
-          } else if (typeof job.part === 'string' && job.part.trim().startsWith('[')) {
-            try {
-              parts = JSON.parse(job.part);
-            } catch {
-              parts = job.part.slice(1, -1)
-                .split(',')
-                .map(p => p.trim().replace(/^"|"$/g, ''));  
-            }
-          } else if (job.part) {
-            parts = job.part.split(',').map(p => p.trim());
-          }
-          const partsHtml = parts.map(p => `${emojiMap[p] || ''}${p}`).join(' / ');
+          if (Array.isArray(job.part)) parts = job.part;
+          else if (typeof job.part === 'string' && job.part.trim().startsWith('[')) {
+            try { parts = JSON.parse(job.part); } catch {
+              parts = job.part.slice(1, -1).split(',').map(p => p.trim().replace(/^"|"$/g, '')); }
+          } else if (job.part) parts = job.part.split(',').map(p => p.trim());
+          const partsHtml = parts.map(p => `${emojiMap[p]||''}${p}`).join(' / ');
 
           const isMatched = job.is_matched;
           const div = document.createElement('div');
@@ -280,7 +283,7 @@
             right.className = 'text-right text-xs text-gray-400 mt-1';
             const aBtn = document.createElement('a');
             aBtn.href = `tel:${job.contact}`;
-            aBtn.className = 'inline-block bg-blue-500 text-white px-1.5 py-[2px] rounded';
+            aBtn.className = 'inline-block bg-blue-500 text-white px-1.5 py-[2}px] rounded';
             aBtn.textContent = '연락처 확인';
             aBtn.addEventListener('click', () => this.incrementClick(job.id));
             right.appendChild(aBtn);
