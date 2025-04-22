@@ -1,113 +1,165 @@
-// match-popup.js
-// 글 수정 + 매칭 상태 변경 (관리자 PIN 고정 포함)
-// -------------------------------------------------
+// form-popup.js
+import bcrypt from 'https://cdn.jsdelivr.net/npm/bcryptjs@2.4.3/dist/bcrypt.es.js';
 
-// ✨ 1. 유틸 ─────────────────────────────────────────
-/** 배열·JSON·null 어떤 입력이 와도 안전하게 배열 반환 */
-function safeParseArray(data) {
-  if (!data) return [];
-  if (Array.isArray(data)) return data;
-  try { return JSON.parse(data); } catch { return []; }
-}
-
-/** SHA‑256 해시 → 64자리 hex 문자열 반환 */
-async function hashSHA256(str) {
-  const buf = await crypto.subtle.digest(
-    'SHA-256',
-    new TextEncoder().encode(str)
-  );
-  return [...new Uint8Array(buf)]
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('');
-}
-
-// ✨ 2. 팝업 진입점 ──────────────────────────────────
-export default function openMatchPopup(jobId) {
-  lockScroll(true);        // 페이지 스크롤 잠금
-  showPasswordModal(jobId);
-}
-
-// ✨ 3. 비밀번호 모달 ────────────────────────────────
-function showPasswordModal(jobId) {
-  const pwModal = document.createElement('div');
-  pwModal.id = 'password-modal';
-  pwModal.className =
-    'fixed inset-0 z-50 flex items-center justify-center bg-gray-800/60';
-  pwModal.innerHTML = `
-    <div id="pw-box" class="bg-white rounded shadow-lg p-6 w-80">
-      <h2 class="text-lg font-semibold mb-4">비밀번호 확인</h2>
-      <input id="pw-input" type="password" maxlength="12"
-             placeholder="비밀번호 (4자리 또는 관리자)"
-             class="border w-full p-2 mb-4" />
-      <div class="flex justify-end gap-2">
-        <button id="pw-cancel" class="bg-gray-500 text-white px-3 py-1 rounded">
-          취소
-        </button>
-        <button id="pw-submit" class="bg-blue-600 text-white px-3 py-1 rounded">
-          확인
-        </button>
-      </div>
+export default function openForm(supabase) {
+  const formModal = document.createElement('div');
+  formModal.id = 'form-modal';
+  formModal.className = 'fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-center z-50';
+  formModal.innerHTML = `
+    <div id="form-modal-content" class="bg-white p-6 rounded shadow-lg max-w-lg w-full">
+      <h2 class="text-xl font-semibold mb-4">글 등록</h2>
+      <form id="create-form" class="space-y-4">
+        <input name="team" placeholder="밴드명" class="border p-2 w-full" />
+        <input name="nickname" placeholder="닉네임" class="border p-2 w-full" />
+        <input name="age" placeholder="연령대" class="border p-2 w-full" />
+        <select name="type" class="border p-2 w-full">
+          <option value="구인">구인</option>
+          <option value="구직">구직</option>
+        </select>
+        <select name="region" class="border p-2 w-full">
+          <option>경기도 > 평택시</option>
+          <option>경기도 > 오산시</option>
+          <option>경기도 > 화성시</option>
+          <option>경기도 > 안성시</option>
+          <option>서울특별시 > 강남구</option>
+        </select>
+        <input name="location" placeholder="연습실 위치" class="border p-2 w-full" />
+        <input name="fee" placeholder="월 회비" class="border p-2 w-full" />
+        <input name="contact" placeholder="연락처" class="border p-2 w-full" />
+        <textarea name="intro" maxlength="100" placeholder="소개글 (100자 이내)" class="border p-2 w-full"></textarea>
+        <input id="password-input" type="password" maxlength="12" placeholder="비밀번호 (4자리 이상)" class="border p-2 w-full" />
+        <div class="flex justify-end space-x-2">
+          <button type="button" id="form-cancel" class="bg-gray-500 text-white px-4 py-2 rounded">취소</button>
+          <button type="button" id="form-submit" class="bg-blue-600 text-white px-4 py-2 rounded">등록</button>
+        </div>
+      </form>
     </div>`;
+  document.body.appendChild(formModal);
 
-  document.body.appendChild(pwModal);
-
-  // 외부 클릭
-  pwModal.addEventListener('click', e => {
-    if (e.target === pwModal) closeModal(pwModal);
+  // 닫기
+  formModal.addEventListener('click', e => {
+    if (e.target === formModal || e.target.id === 'form-cancel') {
+      formModal.remove();
+    }
   });
-  document.getElementById('pw-box').addEventListener('click', e => e.stopPropagation());
-
-  // ✨ 취소 버튼으로 닫기
-  pwModal.querySelector('#pw-cancel')
-        .addEventListener('click', () => closeModal(pwModal));
+  document.getElementById('form-modal-content').addEventListener('click', e => e.stopPropagation());
 
   // 제출
-  document.getElementById('pw-submit').addEventListener('click', async () => {
-    const pw = (document.getElementById('pw-input').value || '').trim();
-    if (pw.length < 4) return alert('비밀번호는 4자리 이상이어야 합니다.');
+  document.getElementById('form-submit').addEventListener('click', async () => {
+    const fd = new FormData(document.getElementById('create-form'));
+    const rawPwd = document.getElementById('password-input').value.trim();
+    if (fd.get('team') === '' || fd.get('nickname') === '') {
+      return alert('팀명과 닉네임을 입력해주세요.');
+    }
+    if (rawPwd.length < 4) {
+      return alert('비밀번호는 4자리 이상이어야 합니다.');
+    }
+
+    // 비밀번호 해싱
+    const hashedPwd = await bcrypt.hash(rawPwd, 10);
+
+    const payload = {
+      team:       fd.get('team'),
+      nickname:   fd.get('nickname'),
+      age:        fd.get('age'),
+      type:       fd.get('type'),
+      region:     fd.get('region'),
+      location:   fd.get('location'),
+      fee:        fd.get('fee'),
+      contact:    fd.get('contact'),
+      intro:      fd.get('intro'),
+      password:   hashedPwd
+    };
 
     try {
-      const hashed = await hashSHA256(pw);
-      const res = await fetch(`/api/verify-password/${jobId}`, {
+      const res = await fetch('/api/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: hashed })
+        body: JSON.stringify(payload)
       });
-      const { success, message, job, is_admin } = await res.json();
-      if (!success) throw new Error(message || '비밀번호가 일치하지 않습니다.');
-
-      closeModal(pwModal);
-      showEditForm(job, hashed, is_admin);
+      const { success, message } = await res.json();
+      if (!success) throw new Error(message);
+      alert('글이 등록되었습니다.');
+      formModal.remove();
+      if (window.App) window.App.loadJobs();
     } catch (err) {
       alert(err.message);
     }
   });
 }
 
-// ✨ 4. 글 수정·매칭 변경 폼 ─────────────────────────
-function showEditForm(job, passwordHash, isAdmin) {
+
+// match-popup.js
+import bcrypt from 'https://cdn.jsdelivr.net/npm/bcryptjs@2.4.3/dist/bcrypt.es.js';
+
+// 안전 파싱
+function safeParseArray(data) {
+  if (!data) return [];
+  if (Array.isArray(data)) return data;
+  try { return JSON.parse(data); } catch { return []; }
+}
+
+export default function openMatchPopup(jobId) {
+  lockScroll(true);
+  showPasswordModal(jobId);
+}
+
+function showPasswordModal(jobId) {
+  const pwModal = document.createElement('div');
+  pwModal.id = 'password-modal';
+  pwModal.className = 'fixed inset-0 z-50 flex items-center justify-center bg-gray-800/60';
+  pwModal.innerHTML = `
+    <div id="pw-box" class="bg-white rounded shadow-lg p-6 w-80">
+      <h2 class="text-lg font-semibold mb-4">비밀번호 확인</h2>
+      <input id="pw-input" type="password" maxlength="12" placeholder="비밀번호 입력" class="border w-full p-2 mb-4" />
+      <div class="flex justify-end gap-2">
+        <button id="pw-cancel" class="bg-gray-500 text-white px-3 py-1 rounded">취소</button>
+        <button id="pw-submit" class="bg-blue-600 text-white px-3 py-1 rounded">확인</button>
+      </div>
+    </div>`;
+  document.body.appendChild(pwModal);
+
+  pwModal.addEventListener('click', e => {
+    if (e.target === pwModal) closeModal(pwModal);
+  });
+  document.getElementById('pw-box').addEventListener('click', e => e.stopPropagation());
+  pwModal.querySelector('#pw-cancel').addEventListener('click', () => closeModal(pwModal));
+
+  document.getElementById('pw-submit').addEventListener('click', async () => {
+    const rawPwd = document.getElementById('pw-input').value.trim();
+    if (rawPwd.length < 4) return alert('비밀번호를 입력해주세요.');
+
+    try {
+      const res = await fetch(`/api/verify-password/${jobId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: rawPwd })
+      });
+      const { success, message, job, is_admin } = await res.json();
+      if (!success) throw new Error(message);
+      closeModal(pwModal);
+      showEditForm(job, rawPwd, is_admin);
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+}
+
+function showEditForm(job, passwordRaw, isAdmin) {
   const modal = document.createElement('div');
   modal.id = 'match-modal';
-  modal.className =
-    'fixed inset-0 z-50 flex items-center justify-center bg-gray-800/60';
+  modal.className = 'fixed inset-0 z-50 flex items-center justify-center bg-gray-800/60';
 
   const parts      = safeParseArray(job.part);
   const matchedNow = safeParseArray(job.matched_parts);
 
   modal.innerHTML = `
-    <div id="match-box"
-         class="bg-white rounded shadow-lg p-6 w-full max-w-md
-                max-h-[80vh] overflow-y-auto">
+    <div id="match-box" class="bg-white rounded shadow-lg p-6 w-full max-w-md max-h-[80vh] overflow-y-auto">
       <h2 class="text-lg font-semibold mb-4">글 수정 / 매칭 상태 변경</h2>
-
       <form id="edit-form" class="space-y-3">
-        <!-- 기본 정보 -->
-        <input name="team"     value="${job.team ?? ''}"
-               placeholder="밴드명"        class="border p-2 w-full" />
-        <input name="nickname" value="${job.nickname ?? ''}"
-               placeholder="닉네임"        class="border p-2 w-full" />
-        <input name="age"      value="${job.age ?? ''}"
-               placeholder="연령대"        class="border p-2 w-full" />
+        <input name="team"     value="${job.team ?? ''}" placeholder="밴드명" class="border p-2 w-full" />
+        <input name="nickname" value="${job.nickname ?? ''}" placeholder="닉네임" class="border p-2 w-full" />
+        <input name="age"      value="${job.age ?? ''}" placeholder="연령대" class="border p-...
 
         <!-- 지역 선택 -->
         <select name="region" class="border p-2 w-full">
