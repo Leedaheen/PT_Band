@@ -213,6 +213,23 @@
           const partsHtml = parts.map(p => `${emojiMap[p] || ''}${p}`).join(' / ');
           const isMatched = job.is_matched;
 
+          const div = document.createElement('div');
+          div.className = `bg-white p-4 rounded shadow job-item${!isMatched ? ' relative cursor-pointer' : ''}${job.pinned ? ' border-l-8 border-yellow-500' : ''}`;
+
+          if (job.pinned) {
+            const ribbon = document.createElement('div');
+            ribbon.className = 'absolute top-2 right-2 bg-yellow-400 text-gray-800 text-xs font-bold px-2 py-0.5 transform rotate-45 shadow-md origin-top-right';
+            ribbon.textContent = 'PINNED';
+            div.appendChild(ribbon);
+          }
+
+          if (isMatched) {
+            const msg = job.type === '구인'
+              ? `🎉 ${job.team} - ${partsHtml} 멤버 모집 완료!`
+              : `🎉 ${job.nickname} - ${partsHtml} 밴드 합류 완료!`;
+            const p = document.createElement
+
+
           /* 카드 div */
           const div = document.createElement('div');
           div.className = `bg-white p-4 rounded shadow job-item${!isMatched ? ' relative cursor-pointer' : ''}${job.pinned ? ' border-l-8 border-yellow-500' : ''}`;
