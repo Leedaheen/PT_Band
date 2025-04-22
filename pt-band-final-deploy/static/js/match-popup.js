@@ -44,7 +44,7 @@ function showPasswordModal(jobId) {
     if (rawPwd.length < 4) return alert('비밀번호는 4자리 이상이어야 합니다.');
 
     try {
-      const res = await fetch(`/api/verify-password/${jobId}`, {
+      const res = await fetch(`/verify-password/${jobId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password: rawPwd })
