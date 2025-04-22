@@ -1,12 +1,17 @@
 // match-popup.js
-// 글 수정 + 매칭 상태 변경 (관리자 PIN 고정 포함)
-// -------------------------------------------------
+// 매칭 상태 변경 + 게시글 수정 팝업 (비밀번호 검증 및 디버깅 강화)
+// ---------------------------------------------------------
 
-// 안전 파싱 유틸
+// 안전하게 배열로 파싱
 function safeParseArray(data) {
   if (!data) return [];
   if (Array.isArray(data)) return data;
   try { return JSON.parse(data); } catch { return []; }
+}
+
+// 스크롤 잠금 해제/설정 (body overflow 제어)
+function lockScroll(disable) {
+  document.body.style.overflow = disable ? 'hidden' : '';
 }
 
 // 팝업 진입점
@@ -15,7 +20,7 @@ export default function openMatchPopup(jobId) {
   showPasswordModal(jobId);
 }
 
-// 비밀번호 확인 모달
+// 비밀번호 확인 모달 표시
 function showPasswordModal(jobId) {
   const pwModal = document.createElement('div');
   pwModal.id = 'password-modal';
@@ -31,29 +36,43 @@ function showPasswordModal(jobId) {
     </div>`;
   document.body.appendChild(pwModal);
 
-  // 외부 클릭 또는 취소 버튼으로 닫기
+  // 취소 및 백그라운드 클릭 시 모달 제거
   pwModal.addEventListener('click', e => {
-    if (e.target === pwModal) closeModal(pwModal);
+    if (e.target === pwModal || e.target.id === 'pw-cancel') {
+      pwModal.remove();
+      lockScroll(false);
+    }
   });
   document.getElementById('pw-box').addEventListener('click', e => e.stopPropagation());
-  pwModal.querySelector('#pw-cancel').addEventListener('click', () => closeModal(pwModal));
 
-  // 확인 버튼
-  pwModal.querySelector('#pw-submit').addEventListener('click', async () => {
-    const rawPwd = document.getElementById('pw-input').value.trim();
-    if (rawPwd.length < 4) return alert('비밀번호는 4자리 이상이어야 합니다.');
+  // 확인 버튼 클릭
+  document.getElementById('pw-submit').addEventListener('click', async () => {
+    const inputEl = document.getElementById('pw-input');
+    const password = (inputEl.value || '').trim();
+    if (!password) return alert('비밀번호를 입력해주세요.');
 
+    console.debug(`Verifying password for job ${jobId}:`, password);
     try {
-      const res = await fetch(`/verify-password/${jobId}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: rawPwd })
+      // 우선 /api 경로로 시도, 404일 경우 기존 경로도 시도
+      let res = await fetch(`/api/verify-password/${jobId}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password })
       });
-      const { success, message, job, is_admin } = await res.json();
-      if (!success) throw new Error(message || '비밀번호가 일치하지 않습니다.');
-      closeModal(pwModal);
-      showEditForm(job, rawPwd, is_admin);
+      if (res.status === 404) {
+        console.debug('Fallback to non-API verify-password');
+        res = await fetch(`/verify-password/${jobId}`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password })
+        });
+      }
+      const data = await res.json();
+      console.debug('verify-password response:', res.status, data);
+      if (!res.ok || !data.success) throw new Error(data.message || '비밀번호 검증에 실패했습니다.');
+
+      pwModal.remove();
+      renderEditForm(data.job, password, data.is_admin);
     } catch (err) {
+      console.error(err);
       alert(err.message);
     }
   });
