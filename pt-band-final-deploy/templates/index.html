@@ -261,11 +261,12 @@
             [
               { label: '오픈톡 닉네임', value: job.nickname || '-' },
               { label: '위치',          value: job.location || '-' },
-              { label: '나이',          value: job.age || '-' },
+              { label: '나이',          value: job.age || '-' },<br>
               { label: '소개',          value: job.intro || '-' }
             ].forEach(item => {
               const p = document.createElement('p');
               if (item.label === '소개') {
+                const detailHtml = item.value==='-'
                 p.innerHTML = `<span class="font-bold text-blue-900">${item.value}</span>`;
               } else {
                 p.innerHTML = `<strong>${item.label}:</strong> ${item.value}`;
