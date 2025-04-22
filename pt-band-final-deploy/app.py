@@ -56,7 +56,9 @@ def click(job_id):
     session['clicked'] = clicked
     return jsonify(success=True)
 
+# 비밀번호 검증 엔드포인트 (API 및 기존 경로 모두 지원)
 @app.route("/api/verify-password/<int:job_id>", methods=["POST"])
+@app.route("/verify-password/<int:job_id>", methods=["POST"])
 def verify_password(job_id):
     try:
         req = request.get_json(force=True)
@@ -71,9 +73,11 @@ def verify_password(job_id):
         if not job:
             return jsonify(success=False, message="잘못된 데이터입니다."), 404
 
+        # 사용자 비밀번호 확인
         if check_password_hash(job.get("password", ""), pw):
             return jsonify(success=True, job=job, is_admin=False)
 
+        # 관리자 비밀번호 확인
         if pw == ADMIN_PASSWORD:
             return jsonify(success=True, job=job, is_admin=True)
 
@@ -98,14 +102,12 @@ def update_job(job_id):
         if not is_admin and not check_password_hash(job.get("password", ""), pw):
             return jsonify(success=False, message="비밀번호가 일치하지 않습니다."), 403
 
-        # 매칭 완료 파트 및 상단 고정 처리
         matched = req.get("matched_parts", [])
         updates = {
             "matched_parts": matched,
             "is_matched":   len(matched) == len(job.get("part", [])),
             "updated_at":   datetime.datetime.utcnow().isoformat()
         }
-
         for key in ["team", "nickname", "age", "region", "location", "fee", "contact", "intro"]:
             if key in req:
                 updates[key] = req[key]
