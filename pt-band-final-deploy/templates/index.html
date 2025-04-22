@@ -82,7 +82,10 @@
       init() {
         this.loadJobs();
         this.initRealtime();
-        document.getElementById('open-form-btn').addEventListener('click', () => openForm(this.supabase));
+
+        document.getElementById('open-form-btn')
+          .addEventListener('click', () => openForm(this.supabase));
+
         document.querySelectorAll('.filter-btn').forEach(btn => {
           btn.addEventListener('click', () => {
             this.selectedType = btn.dataset.filter;
@@ -90,7 +93,10 @@
             this.updateActiveFilter(btn);
           });
         });
-        document.getElementById('regionFilter').addEventListener('change', () => this.applyFilters());
+
+        document.getElementById('regionFilter')
+          .addEventListener('change', () => this.applyFilters());
+
         document.querySelectorAll('.part-filter-btn').forEach(btn => {
           btn.addEventListener('click', () => {
             const part = btn.dataset.part;
@@ -106,6 +112,7 @@
             this.applyFilters();
           });
         });
+
         document.getElementById('job-list').addEventListener('click', e => {
           const matchBtn = e.target.closest('.match-btn');
           if (matchBtn) { openMatchPopup(Number(matchBtn.dataset.id)); return; }
@@ -161,8 +168,10 @@
             let partsArr;
             if (Array.isArray(job.part)) partsArr = job.part;
             else if (typeof job.part === 'string' && job.part.trim().startsWith('[')) {
-              try { partsArr = JSON.parse(job.part); } catch { partsArr = job.part.slice(1, -1)
-                .split(',').map(p => p.trim().replace(/^"|"$/g, '')); }
+              try { partsArr = JSON.parse(job.part); } catch {
+                partsArr = job.part.slice(1, -1)
+                  .split(',')
+                  .map(p => p.trim().replace(/^"|"$/g, '')); }
             } else partsArr = job.part ? job.part.split(',').map(p => p.trim()) : [];
             if (![...this.selectedParts].some(p => partsArr.includes(p))) return false;
           }
@@ -184,26 +193,31 @@
       },
 
       renderJobs(jobs) {
-        const c = document.getElementById('job-list'); c.innerHTML = '';
-        const container = c;
-        if (!jobs.length) {
-          container.innerHTML = '<p class="text-center text-gray-500">등록된 게시글이 없습니다.</p>';
-          return;
-        }
+        const container = document.getElementById('job-list');
+        container.innerHTML = '';
         jobs.forEach(job => {
-          const parts = Array.isArray(job.part) ? job.part : (job.part || '').split(',').map(p => p.trim());
-          const partsHtml = parts.join(' / ');
+          let parts = [];
+          if (Array.isArray(job.part)) parts = job.part;
+          else if (typeof job.part === 'string' && job.part.trim().startsWith('[')) {
+            try { parts = JSON.parse(job.part); } catch {
+              parts = job.part.slice(1, -1)
+                .split(',')
+                .map(p => p.trim().replace(/^"|"$/g, '')); }
+          } else if (job.part) parts = job.part.split(',').map(p => p.trim());
+          const partsHtml = parts.map(p => `${emojiMap[p]||''}${p}`).join(' / ');
+
+          const isMatched = job.is_matched;
           const div = document.createElement('div');
-          div.className = `bg-white p-4 rounded shadow relative job-item${!job.is_matched ? ' cursor-pointer' : ''}${job.pinned ? ' border-l-8 border-yellow-500' : ''}`;
+          div.className = `bg-white p-4 rounded shadow job-item${!isMatched ? ' relative cursor-pointer' : ''}${job.pinned ? ' border-l-8 border-yellow-500' : ''}`;
 
           if (job.pinned) {
-             const ribbon = document.createElement('div');
-             ribbon.className = 'absolute top-2 right-2 bg-yellow-400 text-gray-800 text-xs font-bold px-2 py-0.5 transform rotate-45 shadow-md origin-top-right';
-             ribbon.textContent = 'PINNED';
-             div.appendChild(ribbon);
+            const ribbon = document.createElement('div');
+            ribbon.className = 'absolute top-2 right-2 bg-yellow-400 text-gray-800 text-xs font-bold px-2 py-0.5 transform rotate-45 shadow-md origin-top-right';
+            ribbon.textContent = 'PINNED';
+            div.appendChild(ribbon);
           }
 
-          if (job.is_matched) {
+          if (isMatched) {
             const msg = job.type === '구인'
               ? `🎉 ${job.team} - ${partsHtml} 멤버 모집 완료!`
               : `🎉 ${job.nickname} - ${partsHtml} 밴드 합류 완료!`;
@@ -222,25 +236,41 @@
             div.appendChild(h2);
 
             const p0 = document.createElement('p');
-            p0.className = 'text-sm text-gray-600 mb-2';
+            p0.className = 'text-sm font-normal mb-2';
             if (job.type === '구인') {
-              p0.innerHTML = `<strong>${partsHtml}</strong> 멤버가 필요해요!`;
+              p0.innerHTML = `<strong class="text-black">${partsHtml}</strong> <span class="text-gray-600">멤버를 모집합니다!</span>`;
             } else {
-              p0.textContent = '';
+              const introHtml = (job.intro || '').replace(/\n/g, '<br>');
+              p0.innerHTML = `<strong class="text-black">${introHtml}</strong>`;
             }
             div.appendChild(p0);
+
+            const content = document.createElement('div');
+            content.className = 'expand-content hidden text-sm text-gray-600 mb-2';
+            [
+              { label: '오픈톡 닉네임', value: job.nickname || '-' },
+              { label: '위치', value: job.location || '-' },
+              { label: '나이', value: job.age || '-' },
+              { label: '소개', value: job.intro || '-' }
+            ].forEach(item => {
+              const pDetail = document.createElement('p');
+              if (item.label === '소개') {
+                const detailHtml = item.value === '-' ? '-' : item.value.replace(/\n/g, '<br>');
+                pDetail.innerHTML = `<span class="font-bold text-blue-900">${detailHtml}</span>`;
+              } else {
+                pDetail.innerHTML = `<strong>${item.label}:</strong> ${item.value}`;
+              }
+              content.appendChild(pDetail);
+            });
+            div.appendChild(content);
 
             const right = document.createElement('div');
             right.className = 'text-right text-xs text-gray-400 mt-1';
             const aBtn = document.createElement('a');
             aBtn.href = `tel:${job.contact}`;
-            aBtn.className = 'inline-block bg-blue-500 text-white px-1.5 py-[3px] rounded';
+            aBtn.className = 'inline-block bg-blue-500 text-white px-1.5 py-[2px] rounded';
             aBtn.textContent = '연락처 확인';
-            aBtn.addEventListener('click', e => {
-              e.preventDefault();
-              fetch(`/click/${job.id}`, { method: 'POST' }).then(() => this.loadJobs());
-              window.location.href = `tel:${job.contact}`;
-            });
+            aBtn.addEventListener('click', () => this.incrementClick(job.id));
             right.appendChild(aBtn);
             const pClicks = document.createElement('p');
             pClicks.textContent = `👁 ${job.clicks || 0}명 확인`;
@@ -258,7 +288,6 @@
             matchBtn.textContent = '매칭상태 변경';
             div.appendChild(matchBtn);
           }
-
           container.appendChild(div);
         });
       },
@@ -271,7 +300,10 @@
           const btn = document.createElement('button');
           btn.className = `px-3 py-1 border rounded ${i === this.currentPage ? 'bg-blue-600 text-white' : 'bg-white'}`;
           btn.textContent = i;
-          btn.addEventListener('click', () => { this.currentPage = i; this.renderPage(); });
+          btn.addEventListener('click', () => {
+            this.currentPage = i;
+            this.renderPage();
+          });
           pElem.appendChild(btn);
         }
       },
@@ -279,9 +311,14 @@
       updateActiveFilter(btn) {
         document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
+      },
+
+      async incrementClick(id) {
+        await this.supabase.rpc('increment_clicks', { row_id: id });
       }
     };
 
+    // App 실행
     window.App = App;
     App.init();
   </script>
