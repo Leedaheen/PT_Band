@@ -283,7 +283,7 @@
             ].forEach(item => {
               const p = document.createElement('p');
               if (item.label === '소개') {
-                const detailHtml = item.value==='-'
+                const detailHtml = item.value==='-';
                 p.innerHTML = `<span class="font-bold text-blue-900">${item.value}</span>`;
               } else {
                 p.innerHTML = `<strong>${item.label}:</strong> ${item.value}`;
