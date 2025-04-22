@@ -8,18 +8,22 @@
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
 </head>
 <body class="bg-gray-100 p-4">
-  <!-- ───────────────────────────── 헤더 ───────────────────────────── -->
+  <!-- 헤더 -->
   <div class="flex justify-between items-center mb-2">
     <h1 class="text-xl font-bold">🚀평택 직장인/취미 밴드 구인구직 (BETA)</h1>
     <button id="open-form-btn" class="text-white bg-blue-600 hover:bg-blue-700 px-3 py-1 text-sm rounded">+글 등록</button>
   </div>
 
+  <!-- 공지 -->
   <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-900 text-sm p-3 rounded mb-4">
     <strong>이 게시판은 평택지역 밴드 커뮤니티용입니다. 매너를 지켜주세요!</strong>
-    <p class="mt-1">모든 닉네임은 오픈톡 상 닉네임과 일치시켜주세요 (예: 홍길동/보컬/30 → <strong>홍길동</strong>)</p>
+    <p class="mt-1">
+      모든 닉네임은 오픈톡 상 닉네임과 일치시켜주세요<br>
+      (예: 홍길동/보컬/30 → <strong>홍길동</strong>)
+    </p>
   </div>
 
-  <!-- ───────────────────────────── 상단 필터 ───────────────────────────── -->
+  <!-- 상단 필터 -->
   <div class="flex justify-between items-center mb-4">
     <div class="flex space-x-2">
       <button class="filter-btn px-3 py-2 bg-gray-200 hover:bg-gray-300 rounded text-sm" data-filter="전체">전체</button>
@@ -32,7 +36,7 @@
     </select>
   </div>
 
-  <!-- ───────────────────────────── 파트별 필터 ───────────────────────────── -->
+  <!-- 파트별 필터 -->
   <div class="flex mb-4 space-x-1 w-full sm:w-auto">
     <button class="part-filter-btn px-3 py-2 bg-blue-100 hover:bg-blue-300 rounded text-sm" data-part="보컬(남)">보컬(남)</button>
     <button class="part-filter-btn px-3 py-2 bg-blue-100 hover:bg-blue-300 rounded text-sm" data-part="보컬(여)">보컬(여)</button>
@@ -43,17 +47,16 @@
     <button class="part-filter-btn px-3 py-2 bg-blue-100 hover:bg-blue-300 rounded text-sm" data-part="그 외">그 외</button>
   </div>
 
-  <!-- ───────────────────────────── 목록 & 페이지네이션 ───────────────────────────── -->
+  <!-- 목록 & 페이지네이션 -->
   <div id="job-list" class="space-y-6 mb-4"></div>
   <div id="pagination" class="mt-4 flex justify-center space-x-2"></div>
 
-  <!-- ───────────────────────────── 스크립트 ───────────────────────────── -->
+  <!-- 스크립트 -->
   <script type="module">
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
     import openForm from '/static/js/form-popup.js';
     import openMatchPopup from '/static/js/match-popup.js';
 
-    /* ───────────── 파트별 이모지 매핑 ───────────── */
     const emojiMap = {
       '보컬(남)': '🎤 ',
       '보컬(여)': '🎤 ',
@@ -63,12 +66,10 @@
       '키보드':   '🎹 ',
       '그 외':    '🎶 '
     };
-
-    const SUPABASE_URL  = 'https://dmjelqvpcsafottblvwx.supabase.co';
-    const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRtamVscXZwY3NhZm90dGJsdnd4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQxOTAzNDcsImV4cCI6MjA1OTc2NjM0N30.Z8NfPAVbUz7BIi9ifS9bdVFXUYj6dgu00pwP6THNA8A';
+    const SUPABASE_URL = 'https://dmjelqvpcsafottblvwx.supabase.co';
+    const SUPABASE_ANON = 'YOUR_ANON_KEY';
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON);
 
-    /* ───────────────────────────── App 객체 ───────────────────────────── */
     const App = {
       supabase,
       jobs: [],
@@ -78,7 +79,6 @@
       selectedType: '전체',
       selectedParts: new Set(),
 
-      /* ─── 초기화 ─── */
       init() {
         this.loadJobs();
         this.initRealtime();
@@ -86,7 +86,6 @@
         document.getElementById('open-form-btn')
           .addEventListener('click', () => openForm(this.supabase));
 
-        /* ─ 타입 필터 버튼 ─ */
         document.querySelectorAll('.filter-btn').forEach(btn => {
           btn.addEventListener('click', () => {
             this.selectedType = btn.dataset.filter;
@@ -95,28 +94,25 @@
           });
         });
 
-        /* ─ 지역 필터 ─ */
         document.getElementById('regionFilter')
           .addEventListener('change', () => this.applyFilters());
 
-        /* ─ 파트 필터 ─ */
         document.querySelectorAll('.part-filter-btn').forEach(btn => {
           btn.addEventListener('click', () => {
             const part = btn.dataset.part;
             if (this.selectedParts.has(part)) {
               this.selectedParts.delete(part);
               btn.classList.replace('bg-blue-500', 'bg-blue-100');
-              btn.classList.replace('text-white',   'text-black');
+              btn.classList.replace('text-white', 'text-black');
             } else {
               this.selectedParts.add(part);
               btn.classList.replace('bg-blue-100', 'bg-blue-500');
-              btn.classList.replace('text-black',  'text-white');
+              btn.classList.replace('text-black', 'text-white');
             }
             this.applyFilters();
           });
         });
 
-        /* ─ 목록 내부(토글 / 매칭팝업) ─ */
         document.getElementById('job-list').addEventListener('click', e => {
           const matchBtn = e.target.closest('.match-btn');
           if (matchBtn) {
@@ -125,7 +121,7 @@
           }
           const item = e.target.closest('.job-item');
           if (!item) return;
-          const content  = item.querySelector('.expand-content');
+          const content = item.querySelector('.expand-content');
           const toggleEl = item.querySelector('.expand-toggle');
           if (content && toggleEl) {
             const hidden = content.classList.toggle('hidden');
@@ -134,7 +130,6 @@
         });
       },
 
-      /* ─── 실시간 구독 ─── */
       initRealtime() {
         this.supabase
           .channel('public:jobs')
@@ -142,12 +137,11 @@
           .subscribe();
       },
 
-      /* ─── 데이터 로드 ─── */
       async loadJobs() {
         const { data, error } = await this.supabase
           .from('jobs')
           .select('*')
-          .order('pinned',     { ascending: false })
+          .order('pinned', { ascending: false })
           .order('created_at', { ascending: false });
         if (error) return console.error(error);
         this.jobs = data;
@@ -155,13 +149,31 @@
         this.applyFilters();
       },
 
-      /* ─── 지역 옵션 갱신 ─── */
       refreshRegionOptions() {
         const sel = document.getElementById('regionFilter');
         sel.innerHTML = '<option value="전체">전체</option>' +
           Array.from(new Set(this.jobs.map(j => j.region || '경기도 > 평택시')))
-            .map(r => `<option>${r}</option>`).join('');
+            .map(r => `<option>${r}</option>`)
+            .join('');
       },
+
+      applyFilters() {
+        const region = document.getElementById('regionFilter').value;
+        this.filteredJobs = this.jobs.filter(job => {
+          if (this.selectedType === '매칭완료') return job.is_matched;
+          if (job.is_matched) return false;
+          if (this.selectedType !== '전체' && job.type !== this.selectedType) return false;
+          if (region !== '전체' && (job.region || '경기도 > 평택시') !== region) return false;
+          if (this.selectedParts.size > 0) {
+            let partsArr;
+            if (Array.isArray(job.part)) {
+              partsArr = job.part;
+            } else if (typeof job.part === 'string' && job.part.trim().startsWith('[')) {
+              try {
+                partsArr = JSON.parse(job.part);
+              } catch {
+                partsArr = job.part.slice(1, -1).split(',').map(p => p.trim().replace(/^"|"$/g, ''));ानो
+
 
       /* ─── 필터 적용 ─── */
       applyFilters() {
