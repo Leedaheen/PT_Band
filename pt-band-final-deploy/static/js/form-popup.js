@@ -95,7 +95,7 @@ export default function openForm() {
         <input name='age' placeholder='멤버 연령대' class='border p-1 w-full mb-2'/>
         <div class='mb-2'>
           <label class='block mb-1'>구인 파트:</label>
-          <div class='grid grid-cols-2 gap-4'>${checklistHTML}</div>
+          <div class='grid grid-cols-4 gap-2'>${checklistHTML}</div>
         </div>
         <input required name='location' placeholder='연습실 위치 (필수)' class='border p-1 w-full mb-2'/>
         ${regionSelectHTML}
