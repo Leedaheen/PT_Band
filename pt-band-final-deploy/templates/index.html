@@ -304,6 +304,12 @@
             this.currentPage = i;
             this.renderPage();
           });
+          btn.addEventListener('click', () => {
+            this.currentPage = i;
+            this.renderPage();
+            this.renderPagination(); // **추가**: 클릭 시 버튼 강조 상태 갱신
+          });
+
           pElem.appendChild(btn);
         }
       },
