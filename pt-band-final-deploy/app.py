@@ -10,7 +10,7 @@ app.secret_key = os.environ.get("FLASK_SECRET_KEY", "replace-with-your-secret")
 SUPABASE_URL = os.environ["SUPABASE_URL"]
 SUPABASE_KEY = os.environ["SUPABASE_SERVICE_KEY"]
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
-KAKAO_REST_KEY = os.environ['c63b6579392c013b37676a280a52d956']
+KAKAO_REST_KEY = os.environ['KAKAO_REST_API_KEY']
 REDIRECT_URI   = 'https://pt-band-2.onrender.com/auth/kakao/callback'
 
 @app.route('/auth/kakao/callback')
