@@ -296,9 +296,21 @@
             right.className = 'text-right text-xs text-gray-400 mt-1';
             const aBtn = document.createElement('a');
             aBtn.href = `tel:${job.contact}`;
-            aBtn.className = 'inline-block bg-blue-500 text-white px-1.5 py-[2px] rounded';
+            aBtn.className = 'inline-block bg-blue-500 text-white px-1.5 py-[3px] rounded';
             aBtn.textContent = '연락처 확인';
-            aBtn.addEventListener('click', () => this.incrementClick(job.id));
+            
+            //aBtn.addEventListener('click', () => this.incrementClick(job.id));
+            aBtn.addEventListener('click', async e => {
+              e.preventDefault();               // 1) 기본 tel: 이동을 막고
+              try {
+                await this.incrementClick(job.id);  // 2) 클릭 수 올리기
+              } catch(err) {
+                console.error('조회수 증가 실패:', err);
+              }
+              // 3) 서버 반영 후에 전화 걸기
+              window.location.href = `tel:${job.contact}`;
+            });
+            
             right.appendChild(aBtn);
             const pClicks = document.createElement('p');
             pClicks.textContent = `👁 ${job.clicks || 0}명 확인`;
