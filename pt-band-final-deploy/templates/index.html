@@ -266,14 +266,22 @@
 
             const content = document.createElement('div');
             content.className = 'expand-content hidden text-sm text-gray-600 mb-2';
-            [
+            const details = [
               { label: '🔸닉네임', value: job.nickname || '-' },
-              { label: '🔸위치', value: job.location || '-' },
-              { label: '🔸나이', value: job.age || '-' },
-              { label: \n, value: job.intro || '-' }
-            ].forEach(item => {
+              { label: '🔸위치',   value: job.location || '-' },
+              { label: '🔸나이',   value: job.age      || '-' }
+            ];
+            
+            // '구인' 글에만 소개글 추가
+            if (job.type === '구인') {
+              details.push({ label: '🔸소개', value: job.intro || '-' });
+            }
+            
+            // 렌더링
+            details.forEach(item => {
               const pDetail = document.createElement('p');
-              if (item.label === '소개') {
+              if (item.label === '🔸소개') {
+                // 소개만 굵은 글씨 + 줄바꿈 처리
                 const detailHtml = item.value === '-' ? '-' : item.value.replace(/\n/g, '<br>');
                 pDetail.innerHTML = `<span class="font-bold text-blue-900">${detailHtml}</span>`;
               } else {
@@ -281,6 +289,7 @@
               }
               content.appendChild(pDetail);
             });
+            
             div.appendChild(content);
 
             const right = document.createElement('div');
