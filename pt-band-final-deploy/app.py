@@ -48,8 +48,14 @@ def click(job_id):
     if str(job_id) in clicked:
         return jsonify(success=True)
 
-    resp = supabase.from_("jobs").update({"clicks": supabase.postgrest.raw("clicks + 1")}).eq("id", job_id).execute()
-    if not resp.data:
+    resp = supabase.from_("jobs") \
+        .update({"clicks": {"increment": 1}}) \
+        .eq("id", job_id) \
+        .execute()
+
+    print("RPC update result:", resp.data, resp.error)
+
+        if resp.error:
         return jsonify(success=False, message="조회수 업데이트 실패"), 500
 
     clicked.append(str(job_id))
