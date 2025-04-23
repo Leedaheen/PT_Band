@@ -139,6 +139,8 @@ export default function openForm() {
             const bytes = new TextEncoder().encode(introTextarea.value).length;
             byteCounter.textContent = bytes;
             // 초과 시 빨간색으로 경고 (선택)
-            byteCounter.classList.toggle("text-red-500", bytes > 100);
+            byteCounter.classList.toggle("text-red-500", bytes > 100)
+
+      }};
   }
-}
+
