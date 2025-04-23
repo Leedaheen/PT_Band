@@ -141,6 +141,8 @@ export default function openForm() {
             // 초과 시 빨간색으로 경고 (선택)
             byteCounter.classList.toggle("text-red-500", bytes > 100)
 
-      });
-  }
+        });
+    }
 
+  }
+  }
