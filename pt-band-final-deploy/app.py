@@ -102,7 +102,22 @@ def update_job(job_id):
         if not is_admin and not check_password_hash(job.get("password", ""), pw):
             return jsonify(success=False, message="비밀번호가 일치하지 않습니다."), 403
 
+    # 1) 체크된 matched_parts 배열
         matched = req.get("matched_parts", [])
+
+    # 2) 원본 part 값을 Python 리스트로 파싱
+        parts_src = job.get("part", [])
+        if isinstance(parts_src, str):
+            try:
+                parts = json.loads(parts_src)
+            except:
+                # 만약 JSON 형태가 아니면 단순 문자열 분할
+                parts = [p.strip() for p in parts_src.strip("[]").split(",") if p.strip()]
+        else:
+            parts = parts_src
+
+    # 3) is_matched 결정
+      
         updates = {
             "matched_parts": matched,
             "is_matched":   len(matched) == len(job.get("part", [])),
