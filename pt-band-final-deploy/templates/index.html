@@ -233,7 +233,7 @@
             const h2 = document.createElement('h2');
             h2.className = 'text-lg font-semibold mb-1';
             h2.textContent = job.type === '구직'
-            ? `[${job.nickname || '닉네임 없음'}]`    // 구직일 때는 닉네임
+            ? `[🚀${job.nickname || '닉네임 없음'}]`    // 구직일 때는 닉네임
             : `[${job.team || '팀명 미정'}]`;         // 구인일 때는 팀명
             
             const regionSpan = document.createElement('span');
@@ -251,9 +251,10 @@
               // 변경된 구직 텍스트
               p0.innerHTML = `<strong class="text-black">${partsHtml}</strong> <span class="text-gray-600">멤버 데려가세요!</span>`;
               div.appendChild(p0);
+            }
               // 소개글을 그 아래 줄에 추가
               const introP = document.createElement('p');
-              introP.className = 'font-bold text-sm text-blue-600';
+              introP.className = 'font-bold text-sm text-blue-900';
               introP.textContent = job.intro || '-';
               div.appendChild(introP);
                     } else {
@@ -264,24 +265,28 @@
               div.appendChild(introP);
             }
 
-            const content = document.createElement('div');
-            content.className = 'expand-content hidden text-sm text-gray-600 mb-2';
-            [
-              { label: '오픈톡 닉네임', value: job.nickname || '-' },
-              { label: '위치', value: job.location || '-' },
-              { label: '나이', value: job.age || '-' },
-              { label: '소개', value: job.intro || '-' }
-            ].forEach(item => {
-              const pDetail = document.createElement('p');
-              if (item.label === '소개') {
-                const detailHtml = item.value === '-' ? '-' : item.value.replace(/\n/g, '<br>');
-                pDetail.innerHTML = `<span class="font-bold text-blue-900">${detailHtml}</span>`;
-              } else {
-                pDetail.innerHTML = `<strong>${item.label}:</strong> ${item.value}`;
-              }
-              content.appendChild(pDetail);
-            });
-            div.appendChild(content);
+      // 확장 내용 (소개글 제외 for 구직)
+            if (job.type !== '구직') {
+              const content = document.createElement('div');
+              content.className = 'expand-content hidden text-sm text-gray-600 mb-2';
+              [
+                { label: '오픈톡 닉네임', value: job.nickname || '-' },
+                { label: '위치', value: job.location || '-' },
+                { label: '나이', value: job.age || '-' },
+                { label: '소개', value: job.intro || '-' }
+              ].forEach(item => {
+                const pDetail = document.createElement('p');
+                if (item.label === '소개') {
+                  const detailHtml = item.value.replace(/\n/g, '<br>');
+                  pDetail.innerHTML = `<span class="font-bold text-blue-900">${detailHtml}</span>`;
+                } else {
+                  pDetail.innerHTML = `<strong>${item.label}:</strong> ${item.value}`;
+                }
+                content.appendChild(pDetail);
+              });
+              div.appendChild(content);
+            }
+
 
             const right = document.createElement('div');
             right.className = 'text-right text-xs text-gray-400 mt-1';
