@@ -296,18 +296,22 @@
             right.className = 'text-right text-xs text-gray-400 mt-1';
             const aBtn = document.createElement('a');
             aBtn.href = `tel:${job.contact}`;
-            aBtn.className = 'inline-block bg-blue-500 text-white px-1.5 py-[3px] rounded';
+            aBtn.className = 'inline-block bg-blue-500 text-white px-1.5 py-[4px] rounded';
             aBtn.textContent = '연락처 확인';
             
-            //aBtn.addEventListener('click', () => this.incrementClick(job.id));
+            // Flask /click/:id 호출 + UI 즉시 반영
             aBtn.addEventListener('click', async e => {
-              e.preventDefault();               // 1) 기본 tel: 이동을 막고
+              e.preventDefault();  // 전화 연결을 잠깐 멈추고
               try {
-                await this.incrementClick(job.id);  // 2) 클릭 수 올리기
-              } catch(err) {
-                console.error('조회수 증가 실패:', err);
+                const res = await fetch(`/click/${job.id}`, { method: 'POST' });
+                if (!res.ok) throw new Error('조회수 업데이트 실패');
+                // 로컬 job.clicks 와 화면도 즉시 +1
+                job.clicks = (job.clicks || 0) + 1;
+                pClicks.textContent = `👁 ${job.clicks}명 확인`;
+              } catch (err) {
+                console.error(err);
               }
-              // 3) 서버 반영 후에 전화 걸기
+              // 클릭 수 반영 후에 전화 연결
               window.location.href = `tel:${job.contact}`;
             });
             
@@ -360,7 +364,7 @@
       },
 
       async incrementClick(id) {
-        await this.supabase.rpc('increment_clicks', { row_id: id });
+        await fetch(`/click/${id}`, { method: 'POST' });
       }
     };
 
