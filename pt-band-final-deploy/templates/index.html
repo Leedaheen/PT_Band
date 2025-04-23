@@ -233,7 +233,7 @@
             const h2 = document.createElement('h2');
             h2.className = 'text-lg font-semibold mb-1';
             h2.textContent = job.type === '구직'
-            ? `[🏝️구직중]`    // 구직일 때는 닉네임
+            ? `[${job.nickname || '닉네임 없음'}]`    // 구직일 때는 닉네임
             : `[${job.team || '팀명 미정'}]`;         // 구인일 때는 팀명
             
             const regionSpan = document.createElement('span');
