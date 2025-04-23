@@ -29,6 +29,7 @@
   <!-- 헤더 -->
   <div class="flex justify-between items-center mb-2">
     <h1 class="text-xl font-bold">🚀평택 직장인/취미 밴드 구인구직 (BETA)</h1>
+  
     <button id="open-form-btn" class="text-white bg-blue-600 hover:bg-blue-700 px-3 py-1 text-sm rounded">+글 등록</button>
   </div>
 
@@ -98,6 +99,7 @@
       selectedParts: new Set(),
 
       init() {
+
         this.loadJobs();
         this.initRealtime();
 
@@ -109,6 +111,18 @@
             this.selectedType = btn.dataset.filter;
             this.applyFilters();
             this.updateActiveFilter(btn);
+
+            if (!window.user) {
+              // user 정보 없으면 +글 등록 버튼을 로그인 버튼으로 대체
+              const btn = document.getElementById('open-form-btn');
+              btn.textContent = '카카오 로그인 후 작성';
+              btn.onclick = () => { window.location.href = '/auth/kakao/login'; };
+            } else {
+              document.getElementById('open-form-btn')
+                      .addEventListener('click', () => openForm(supabase));
+            }
+
+            
           });
         });
 
