@@ -240,14 +240,26 @@
             div.appendChild(h2);
 
             const p0 = document.createElement('p');
-            p0.className = 'text-sm font-normal mb-2';
+            p0.className = 'text-sm mb-1';
             if (job.type === '구인') {
               p0.innerHTML = `<strong class="text-black">${partsHtml}</strong> <span class="text-gray-600">멤버를 모집합니다!</span>`;
-            } else {
-              const introHtml = (job.intro || '').replace(/\n/g, '<br>');
-              p0.innerHTML = `<strong class="text-black">${introHtml}</strong>`;
+              div.appendChild(p0);
+            } else if (job.type === '구직') {
+              // 변경된 구직 텍스트
+              p0.innerHTML = `<strong class="text-black">[${partsHtml}]</strong> <span class="text-gray-600">멤버 데려가세요!</span>`;
+              div.appendChild(p0);
+              // 소개글을 그 아래 줄에 추가
+              const introP = document.createElement('p');
+              introP.className = 'text-sm text-gray-600';
+              introP.textContent = job.intro || '-';
+              div.appendChild(introP);
+                    } else {
+              // 기타 타입
+              const introP = document.createElement('p');
+              introP.className = 'text-sm text-gray-600';
+              introP.textContent = job.intro || '-';
+              div.appendChild(introP);
             }
-            div.appendChild(p0);
 
             const content = document.createElement('div');
             content.className = 'expand-content hidden text-sm text-gray-600 mb-2';
