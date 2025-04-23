@@ -266,7 +266,7 @@
             }
 
       // 확장 내용 (소개글 제외 for 구직)
-            if (job.type !== '구직') {
+            if (job.type == '구인') {
               const content = document.createElement('div');
               content.className = 'expand-content hidden text-sm text-gray-600 mb-2';
               [
