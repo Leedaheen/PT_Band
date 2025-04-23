@@ -47,16 +47,13 @@ function showPasswordModal(jobId) {
   document.body.appendChild(pwModal);
 
   pwModal.addEventListener('click', e => {
-    if (e.target === pwModal || e.target.id === 'pw-cancel') {
-      closeModal(pwModal);
-    }
+    if (e.target === pwModal || e.target.id === 'pw-cancel') closeModal(pwModal);
   });
-  document.getElementById('pw-box').addEventListener('click', e => e.stopPropagation());
+  pwModal.querySelector('#pw-box').addEventListener('click', e => e.stopPropagation());
 
-  document.getElementById('pw-submit').addEventListener('click', async () => {
-    const rawPwd = (document.getElementById('pw-input').value || '').trim();
+  pwModal.querySelector('#pw-submit').addEventListener('click', async () => {
+    const rawPwd = (pwModal.querySelector('#pw-input').value || '').trim();
     if (rawPwd.length < 4) return alert('비밀번호는 4자리 이상이어야 합니다.');
-
     console.debug('[MatchPopup] verifying password for job', jobId, rawPwd);
     try {
       let res = await fetch(`/api/verify-password/${jobId}`, {
@@ -75,7 +72,6 @@ function showPasswordModal(jobId) {
       const data = await res.json();
       console.debug('[MatchPopup] verify response', res.status, data);
       if (!res.ok || !data.success) throw new Error(data.message || '비밀번호 검증에 실패했습니다.');
-
       closeModal(pwModal);
       renderEditForm(data.job, rawPwd, data.is_admin);
     } catch (err) {
@@ -127,7 +123,7 @@ function renderEditForm(job, password, isAdmin) {
         ` : ''}
 
         <div class="flex justify-end space-x-2 pt-4">
-          <button type="button" id="cancel-edit" class="bg-gray-500 text-white px-4 py-2 rounded">취소</button>
+          <button type="button" data-action="cancel" class="bg-gray-500 text-white px-4 py-2 rounded">취소</button>
           <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded">저장</button>
         </div>
       </form>
@@ -135,10 +131,10 @@ function renderEditForm(job, password, isAdmin) {
   document.body.appendChild(modal);
 
   modal.addEventListener('click', e => { if (e.target === modal) closeModal(modal); });
-  document.getElementById('match-box').addEventListener('click', e => e.stopPropagation());
-  document.getElementById('cancel-edit').addEventListener('click', () => closeModal(modal));
+  modal.querySelector('#match-box').addEventListener('click', e => e.stopPropagation());
+  modal.querySelector('button[data-action="cancel"]').addEventListener('click', () => closeModal(modal));
 
-  document.getElementById('edit-form').addEventListener('submit', async e => {
+  modal.querySelector('#edit-form').addEventListener('submit', async e => {
     e.preventDefault();
     // 체크된 파트 목록 수집
     const checkedEls = modal.querySelectorAll('input[name="matched_part"]:checked');
@@ -163,7 +159,7 @@ function renderEditForm(job, password, isAdmin) {
       matched_parts: matched,
       ...(isAdmin ? { pinned } : {})
     };
-    console.debug('[MatchPopup] update payload:', payload);
+    console.log('[MatchPopup] update payload:', payload);
 
     try {
       const res = await fetch(`/api/update/${job.id}`, {
@@ -172,7 +168,7 @@ function renderEditForm(job, password, isAdmin) {
         body: JSON.stringify(payload)
       });
       const data = await res.json();
-      console.debug('[MatchPopup] update response:', res.status, data);
+      console.log('[MatchPopup] update response:', res.status, data);
       if (!res.ok || !data.success) throw new Error(data.message || '저장 실패');
       alert('저장되었습니다.');
       closeModal(modal);
