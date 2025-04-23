@@ -10,7 +10,46 @@ app.secret_key = os.environ.get("FLASK_SECRET_KEY", "replace-with-your-secret")
 SUPABASE_URL = os.environ["SUPABASE_URL"]
 SUPABASE_KEY = os.environ["SUPABASE_SERVICE_KEY"]
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+KAKAO_REST_KEY = os.environ['KAKAO_REST_API_KEY']
+REDIRECT_URI   = 'https://pt-band-2.onrender.com/auth/kakao/callback'
 
+@app.route('/auth/kakao/callback')
+def kakao_callback():
+    code = request.args.get('code')
+    # 1) 토큰 발급
+    token_res = requests.post('https://kauth.kakao.com/oauth/token', data={
+      'grant_type':'authorization_code',
+      'client_id':  KAKAO_REST_KEY,
+      'redirect_uri':REDIRECT_URI,
+      'code':       code
+    }).json()
+    access_token = token_res.get('access_token')
+
+    # 2) 프로필 조회
+    profile = requests.get('https://kapi.kakao.com/v2/user/me',
+      headers={'Authorization': f'Bearer {access_token}'}
+    ).json()
+    kakao_id = profile['id']
+    nickname = profile['properties'].get('nickname','')
+
+    # 3) Supabase users 테이블에 upsert
+    user = supabase.from_('users').upsert({
+      'id': kakao_id,
+      'nickname': nickname,
+      'updated_at': datetime.datetime.utcnow().isoformat()
+    }, on_conflict='id').single().execute().data
+
+    # 4) 세션에 사용자 정보 저장
+    session['user'] = {'id': kakao_id, 'nickname': nickname}
+
+    return redirect('/')  # 메인 페이지로
+
+# 예: 로그인 상태 확인용 API
+@app.route('/api/me')
+def me():
+    if 'user' in session:
+      return jsonify(session['user'])
+    return jsonify(None), 401
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "admin1234")
 
 @app.route("/")
