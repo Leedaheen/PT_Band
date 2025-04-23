@@ -1,6 +1,24 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
+  <!-- index.html <head> 안에 한 줄 -->
+<script src="https://developers.kakao.com/sdk/js/kakao.min.js"></script>
+<script>
+  Kakao.init('YOUR_REST_API_KEY');  // ① 초기화
+
+  function kakaoLogin() {
+    Kakao.Auth.authorize({         // ② 로그인 팝업 띄우기
+      redirectUri: 'https://pt-band-2.onrender.com/auth/kakao/callback'
+    });
+  }
+</script>
+
+<!-- 원하는 위치에 로그인 버튼 -->
+<button onclick="kakaoLogin()"
+        class="bg-yellow-300 px-4 py-2 rounded text-black">
+  카카오 로그인
+</button>
+
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>🚀직장인/취미 밴드 구인구직</title>
