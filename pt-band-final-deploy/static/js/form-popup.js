@@ -106,19 +106,6 @@ export default function openForm() {
         <div class="text-xs text-gray-500 mb-2 text-right">
           <span id="intro-byte-count">0</span>/100 bytes
         </div>
-
-        const introTextarea = container.querySelector("textarea[name='intro']");
-        const byteCounter   = container.querySelector("#intro-byte-count");
-        
-        if (introTextarea && byteCounter) {
-          // 입력될 때마다 UTF-8 바이트 길이를 계산
-          introTextarea.addEventListener("input", () => {
-            const bytes = new TextEncoder().encode(introTextarea.value).length;
-            byteCounter.textContent = bytes;
-            // 초과 시 빨간색으로 경고 (선택)
-            byteCounter.classList.toggle("text-red-500", bytes > 100);
-          });
-        }
         
         <input required name='password' type='password' maxlength='4' placeholder='비밀번호 4자리' class='border p-1 w-full mb-2'/>
       `;
@@ -137,6 +124,18 @@ export default function openForm() {
           <span id="intro-byte-count">0</span>/100 bytes
         </div>
 
+        const introTextarea = container.querySelector("textarea[name='intro']");
+        const byteCounter   = container.querySelector("#intro-byte-count");
+        
+        if (introTextarea && byteCounter) {
+          // 입력될 때마다 UTF-8 바이트 길이를 계산
+          introTextarea.addEventListener("input", () => {
+            const bytes = new TextEncoder().encode(introTextarea.value).length;
+            byteCounter.textContent = bytes;
+            // 초과 시 빨간색으로 경고 (선택)
+            byteCounter.classList.toggle("text-red-500", bytes > 100);
+          });
+        }
         
         <input required name='password' type='password' maxlength='4' placeholder='비밀번호 4자리' class='border p-1 w-full mb-2'/>
       `;
