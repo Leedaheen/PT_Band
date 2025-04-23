@@ -98,11 +98,12 @@ def update_job(job_id):
         if not job:
             return jsonify(success=False, message="잘못된 데이터입니다."), 404
 
+    # 인증
         is_admin = (pw == ADMIN_PASSWORD)
         if not is_admin and not check_password_hash(job.get("password", ""), pw):
             return jsonify(success=False, message="비밀번호가 일치하지 않습니다."), 403
 
-    # 1) 체크된 matched_parts 배열
+    # 1) 체크된 matched_parts 배열 (클라이언트에서 넘어온 매칭된 파트)
         matched = req.get("matched_parts", [])
 
     # 2) 원본 part 값을 Python 리스트로 파싱
@@ -110,7 +111,7 @@ def update_job(job_id):
         if isinstance(parts_src, str):
             try:
                 parts = json.loads(parts_src)
-            except:
+            except Exception:
                 # 만약 JSON 형태가 아니면 단순 문자열 분할
                 parts = [p.strip() for p in parts_src.strip("[]").split(",") if p.strip()]
         else:
@@ -120,15 +121,17 @@ def update_job(job_id):
       
         updates = {
             "matched_parts": matched,
-            "is_matched":   len(matched) == len(job.get("part", [])),
-            "updated_at":   datetime.datetime.utcnow().isoformat()
+            "is_matched":    len(matched) == len(parts),
+            "updated_at":    datetime.datetime.utcnow().isoformat()
         }
+
+    # 나머지 필드 업데이트
         for key in ["team", "nickname", "age", "region", "location", "fee", "contact", "intro"]:
             if key in req:
                 updates[key] = req[key]
         if is_admin and "pinned" in req:
             updates["pinned"] = req["pinned"]
-
+    # DB 반영
         upd = supabase.from_("jobs").update(updates).eq("id", job_id).execute()
         if not upd.data:
             return jsonify(success=False, message="수정 실패"), 500
