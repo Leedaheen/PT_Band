@@ -95,7 +95,7 @@ export default function openForm() {
         <input name='age' placeholder='멤버 연령대' class='border p-1 w-full mb-2'/>
         <div class='mb-2'>
           <label class='block mb-1'>구인 파트:</label>
-          <div class='grid grid-cols-4 gap-2'>${checklistHTML}</div>
+          <div class='grid grid-cols-3 gap-2'>${checklistHTML}</div>
         </div>
         <input required name='location' placeholder='연습실 위치 (필수)' class='border p-1 w-full mb-2'/>
         ${regionSelectHTML}
@@ -125,7 +125,9 @@ export default function openForm() {
     } else {
       container.innerHTML = `
         <input required name='nickname' placeholder='오픈톡 닉네임 (필수)' class='border p-1 w-full mb-2'/>
-        <div class='mb-2'><label class='block mb-1'>구직 파트:</label>${checklistHTML}</div>
+          <label class='block mb-1'>구직 파트:</label>
+          <div class='grid grid-cols-3 gap-2'>${checklistHTML}</div>
+        </div>
         <input required name='age' placeholder='나이' class='border p-1 w-full mb-2'/>
         ${regionSelectHTML}
         <input required name='contact' placeholder='연락처 (필수)' class='border p-1 w-full mb-2'/>
