@@ -102,6 +102,10 @@ export default function openForm() {
         <input name='fee' placeholder='월 회비 선택' class='border p-1 w-full mb-2'/>
         <input required name='contact' placeholder='연락처 필수' class='border p-1 w-full mb-2'/>
         <textarea name='intro' placeholder='선호 장르 및 간단한 소개 (100자 이내)' maxlength='100' class='border p-1 w-full mb-2'></textarea>
+        
+        <div class="text-xs text-gray-500 mb-2 text-right">
+          <span id="intro-byte-count">0</span>/100 bytes
+        </div>
         <input required name='password' type='password' maxlength='4' placeholder='비밀번호 4자리' class='border p-1 w-full mb-2'/>
       `;
     } else {
@@ -112,6 +116,9 @@ export default function openForm() {
         ${regionSelectHTML}
         <input required name='contact' placeholder='연락처 (필수)' class='border p-1 w-full mb-2'/>
         <textarea name='intro' placeholder='선호 장르 및 간단한 소개 (100자 이내)' maxlength='100' class='border p-1 w-full mb-2'></textarea>
+        <div class="text-xs text-gray-500 mb-2 text-right">
+          <span id="intro-byte-count">0</span>/100 bytes
+        </div>
         <input required name='password' type='password' maxlength='4' placeholder='비밀번호 4자리' class='border p-1 w-full mb-2'/>
       `;
     }
