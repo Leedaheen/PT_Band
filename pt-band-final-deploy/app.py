@@ -1,8 +1,9 @@
 import os
 import datetime
-from flask import Flask, render_template, request, jsonify, session
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 from werkzeug.security import generate_password_hash, check_password_hash
 from supabase import create_client, Client
+from functools import wraps
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "replace-with-your-secret")
@@ -62,6 +63,21 @@ def index():
     return render_template("index.html", jobs=jobs, locations=locations, types=types, parts=parts)
 
 @app.route("/add", methods=["POST"])
+
+#### 글 등록 시 카카오 로그인 필수화
+def login_required(f):
+    @wraps(f)
+    def wrap(*args, **kwargs):
+        if 'user' not in session:
+            # 카카오 로그인 플로우 시작 엔드포인트로 이동
+            return redirect(url_for('kakao_login', next=request.path))
+        return f(*args, **kwargs)
+    return wrap
+
+@app.route("/add", methods=["POST"])
+@login_required
+
+
 def add_job():
     item = request.get_json(force=True) or {}
     if not item:
