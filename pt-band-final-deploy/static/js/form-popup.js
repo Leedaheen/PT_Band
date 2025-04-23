@@ -126,7 +126,10 @@ export default function openForm() {
         
         <input required name='password' type='password' maxlength='4' placeholder='비밀번호 4자리' class='border p-1 w-full mb-2'/>
       `;
-        
+      
+    
+    }
+    // 폰트 바이트 계산 //
         const introTextarea = container.querySelector("textarea[name='intro']");
         const byteCounter   = container.querySelector("#intro-byte-count");
         
@@ -137,9 +140,5 @@ export default function openForm() {
             byteCounter.textContent = bytes;
             // 초과 시 빨간색으로 경고 (선택)
             byteCounter.classList.toggle("text-red-500", bytes > 100);
-          });
-        }
-    
-    }
   }
 }
