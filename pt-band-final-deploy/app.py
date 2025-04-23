@@ -11,7 +11,7 @@ SUPABASE_URL = os.environ["SUPABASE_URL"]
 SUPABASE_KEY = os.environ["SUPABASE_SERVICE_KEY"]
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 KAKAO_REST_KEY = os.environ['KAKAO_REST_API_KEY']
-REDIRECT_URI   = 'https://pt-band-2.onrender.com/auth/kakao/callback'
+REDIRECT_URI   = 'https://pt-band-2.onrender.com'
 
 @app.route('/auth/kakao/callback')
 def kakao_callback():
