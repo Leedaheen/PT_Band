@@ -267,10 +267,10 @@
             const content = document.createElement('div');
             content.className = 'expand-content hidden text-sm text-gray-600 mb-2';
             [
-              { label: '✔️닉네임', value: job.nickname || '-' },
-              { label: '✔️위치', value: job.location || '-' },
-              { label: '✔️나이', value: job.age || '-' },
-              { label: '✔️소개', value: job.intro || '-' }
+              { label: '🔸닉네임', value: job.nickname || '-' },
+              { label: '🔸위치', value: job.location || '-' },
+              { label: '🔸나이', value: job.age || '-' },
+              { label: \n, value: job.intro || '-' }
             ].forEach(item => {
               const pDetail = document.createElement('p');
               if (item.label === '소개') {
