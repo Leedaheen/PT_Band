@@ -141,7 +141,11 @@
             .order('pinned', { ascending: false })
             .order('created_at', { ascending: false });
           if (error) throw error;
-          this.jobs = data;
+          // Boolean coercion for matched status
+          this.jobs = data.map(job => ({
+            ...job,
+            is_matched: job.is_matched === true || job.is_matched === 'true'
+          }));
           this.refreshRegionOptions();
           this.applyFilters();
         } catch (err) {
