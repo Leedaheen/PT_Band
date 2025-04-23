@@ -55,7 +55,7 @@ def click(job_id):
 
     print("RPC update result:", resp.data, resp.error)
 
-        if resp.error:
+    if resp.error:
         return jsonify(success=False, message="조회수 업데이트 실패"), 500
 
     clicked.append(str(job_id))
