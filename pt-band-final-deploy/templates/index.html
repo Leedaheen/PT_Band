@@ -232,7 +232,10 @@
           } else {
             const h2 = document.createElement('h2');
             h2.className = 'text-lg font-semibold mb-1';
-            h2.textContent = job.type === '구직' ? `[${partsHtml}]` : `[${job.team || '팀명 미정'}]`;
+            h2.textContent = job.type === '구직'
+            ? `[${job.nickname || '닉네임 없음'}]`    // 구직일 때는 닉네임
+            : `[${job.team || '팀명 미정'}]`;         // 구인일 때는 팀명
+            
             const regionSpan = document.createElement('span');
             regionSpan.className = 'text-sm text-gray-500 ml-1';
             regionSpan.textContent = `(${job.region || '경기도 > 평택시'})`;
@@ -246,7 +249,7 @@
               div.appendChild(p0);
             } else if (job.type === '구직') {
               // 변경된 구직 텍스트
-              p0.innerHTML = `<strong class="text-black">[${partsHtml}]</strong> <span class="text-gray-600">멤버 데려가세요!</span>`;
+              p0.innerHTML = `<strong class="text-black">${partsHtml}</strong> <span class="text-gray-600">멤버 데려가세요!</span>`;
               div.appendChild(p0);
               // 소개글을 그 아래 줄에 추가
               const introP = document.createElement('p');
