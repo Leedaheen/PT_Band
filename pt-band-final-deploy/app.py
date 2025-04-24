@@ -47,9 +47,10 @@ def click(job_id):
     clicked = session.setdefault('clicked', [])
     if str(job_id) in clicked:
         return jsonify(success=True)
-
+        
+     # raw SQL fragment 로 클릭 수 1 증가
     resp = supabase.from_("jobs") \
-        .update({"clicks": {"increment": 1}}) \
+        .update({"clicks": supabase.postgrest.raw("clicks + 1")}) \
         .eq("id", job_id) \
         .execute()
 
