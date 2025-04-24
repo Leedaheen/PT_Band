@@ -1,5 +1,5 @@
 // match-popup.js
-// 글 수정 + 매칭 상태 변경 팝업 (관리자 PIN 고정 포함)
+// 글 수정 + 매칭 상태 변경 팝업 (관리자 PIN 고정 및 삭제 기능 포함)
 // -------------------------------------------------
 
 // 안전 파싱 유틸
@@ -46,22 +46,18 @@ function showPasswordModal(jobId) {
     </div>`;
   document.body.appendChild(pwModal);
 
-pwModal.addEventListener('click', e => {
-  // 1) 배경을 클릭하거나, 2) pw-cancel 버튼 자체를 클릭했을 때 닫기
-  if (e.target === pwModal || e.target.id === 'pw-cancel') {
-    closeModal(pwModal);
-  }
-});
+  // 배경 클릭 또는 취소 버튼
+  pwModal.addEventListener('click', e => {
+    if (e.target === pwModal || e.target.id === 'pw-cancel') {
+      closeModal(pwModal);
+    }
+  });
+  // 내부 박스 클릭 방지
+  pwModal.querySelector('#pw-box').addEventListener('click', e => e.stopPropagation());
+  // 취소 버튼 핸들
+  pwModal.querySelector('#pw-cancel').addEventListener('click', () => closeModal(pwModal));
 
-// 내부 박스 클릭은 모달 닫기 이벤트 전파를 막기
-pwModal.querySelector('#pw-box')
-  .addEventListener('click', e => e.stopPropagation());
-
-// 그리고 취소 버튼에도 명시적으로 닫기 핸들러 달아주기
-pwModal.querySelector('#pw-cancel')
-  .addEventListener('click', () => closeModal(pwModal));
-
-
+  // 확인 버튼 핸들
   pwModal.querySelector('#pw-submit').addEventListener('click', async () => {
     const rawPwd = (pwModal.querySelector('#pw-input').value || '').trim();
     if (rawPwd.length < 4) return alert('비밀번호는 4자리 이상이어야 합니다.');
@@ -133,53 +129,46 @@ function renderEditForm(job, password, isAdmin) {
           </div>
         ` : ''}
 
-        <div class="flex justify-end space-x-2 pt-4">
+        <div class="flex justify-between space-x-2 pt-4">
           <button type="button" data-action="cancel" class="bg-gray-500 text-white px-4 py-2 rounded">취소</button>
+          ${isAdmin ? `<button type="button" data-action="delete" class="bg-red-600 text-white px-4 py-2 rounded">삭제</button>` : ''}
           <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded">저장</button>
-          ${isAdmin
-            ? `<button type="button" id="delete-btn" class="bg-red-600 text-white px-4 py-2 rounded">삭제</button>`
-            : ''}
         </div>
       </form>
     </div>`;
-  // 삭제 버튼 이벤트 핸들러 //
-    document.getElementById('edit-form').addEventListener('submit', /* 저장 로직 */);
-
-     if (isAdmin) {
-       modal.querySelector('#delete-btn').addEventListener('click', async () => {
-         if (!confirm('정말 이 글을 삭제하시겠습니까?')) return;
-         try {
-           const res = await fetch(`/api/delete/${job.id}`, {
-             method: 'DELETE',
-             headers: { 'Content-Type': 'application/json' },
-             body: JSON.stringify({ password })
-           });
-           const data = await res.json();
-           if (!res.ok || !data.success) throw new Error(data.message || '삭제 실패');
-           alert('삭제되었습니다.');
-           modal.remove();
-           if (window.App) window.App.loadJobs();
-         } catch (err) {
-           alert(err.message);
-         }
-       });
-     }
-
-  
-
-  // 삭제 버튼 이벤트 핸들러 여기까지 //
   document.body.appendChild(modal);
 
+  // 모달 바깥 클릭 닫기
   modal.addEventListener('click', e => { if (e.target === modal) closeModal(modal); });
   modal.querySelector('#match-box').addEventListener('click', e => e.stopPropagation());
+
+  // 취소 버튼
   modal.querySelector('button[data-action="cancel"]').addEventListener('click', () => closeModal(modal));
 
+  // 삭제 버튼 (관리자 전용)
+  const delBtn = modal.querySelector('button[data-action="delete"]');
+  if (delBtn) {
+    delBtn.addEventListener('click', async () => {
+      if (!confirm('정말 삭제하시겠습니까?')) return;
+      try {
+        const res = await fetch(`/api/delete/${job.id}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (!res.ok || !data.success) throw new Error(data.message || '삭제 실패');
+        alert('삭제되었습니다.');
+        closeModal(modal);
+        if (window.App) window.App.loadJobs();
+      } catch (err) {
+        console.error('[MatchPopup] delete error', err);
+        alert(err.message);
+      }
+    });
+  }
+
+  // 저장 처리
   modal.querySelector('#edit-form').addEventListener('submit', async e => {
     e.preventDefault();
-    // 체크된 파트 목록 수집
     const checkedEls = modal.querySelectorAll('input[name="matched_part"]:checked');
     const matched = Array.from(checkedEls).map(el => el.value);
-    // 관리자 상단 고정 여부 확인
     let pinned = false;
     if (isAdmin) {
       const pinEl = modal.querySelector('input[name="pinned"]');
