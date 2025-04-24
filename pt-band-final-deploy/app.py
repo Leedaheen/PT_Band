@@ -42,6 +42,8 @@ def add_job():
         return jsonify(success=False, message="등록 실패"), 500
     return jsonify(success=True)
 
+####### 클릭 카운팅
+
 @app.route("/click/<int:job_id>", methods=["POST"])
 def click(job_id):
     clicked = session.setdefault('clicked', [])
@@ -50,14 +52,13 @@ def click(job_id):
         return jsonify(success=True)
 
     try:
-        # 1) 현재 클릭 수 조회
-        sel = supabase.from_("jobs") \
+        # 1) 현재 clicks 가져오기
+        resp = supabase.from_("jobs") \
             .select("clicks") \
             .eq("id", job_id) \
             .single() \
             .execute()
-
-        current = (sel_resp.data or {}).get("clicks", 0) or 0
+        current = (resp.data or {}).get("clicks", 0) or 0
 
         # 2) clicks + 1 업데이트
         supabase.from_("jobs") \
@@ -70,15 +71,10 @@ def click(job_id):
         session['clicked'] = clicked
         return jsonify(success=True)
 
-    except APIError as e:
-        # PostgREST 요청 에러 (400, 500 등)
-        app.logger.error("클릭수 업데이트 실패 (Supabase): %s", e)
-        return jsonify(success=False, message="조회수 업데이트 실패"), 500
-
     except Exception as e:
-        # 기타 파싱 에러 등
-        app.logger.exception("클릭수 처리 중 예외")
-        return jsonify(success=False, message="서버 오류"), 500
+        # 에러 로깅 및 실패 응답
+        import traceback; traceback.print_exc()
+        return jsonify(success=False, message="조회수 업데이트 실패"), 500
 
 
 # 비밀번호 검증 엔드포인트 (API 및 기존 경로 모두 지원)
