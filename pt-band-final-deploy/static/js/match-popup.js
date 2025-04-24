@@ -49,7 +49,11 @@ function showPasswordModal(jobId) {
   pwModal.addEventListener('click', e => {
     if (e.target === pwModal || e.target.id === 'pw-cancel') closeModal(pwModal);
   });
+ // 내부 컨테이너 클릭은 모달 닫기 방지
   pwModal.querySelector('#pw-box').addEventListener('click', e => e.stopPropagation());
+
+  // 취소 버튼에도 명시적으로 닫기 핸들러 추가
+  pwModal.querySelector('#pw-cancel').addEventListener('click', () => closeModal(pwModal));
 
   pwModal.querySelector('#pw-submit').addEventListener('click', async () => {
     const rawPwd = (pwModal.querySelector('#pw-input').value || '').trim();
