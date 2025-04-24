@@ -46,18 +46,22 @@ def add_job():
 
 @app.route("/api/delete/<int:job_id>", methods=["DELETE"])
 def delete_job(job_id):
-    req = request.get_json(force=True) or {}
-    pw  = req.get("password", "").strip()
-    # 관리자 비밀번호만 허용
-    if pw != ADMIN_PASSWORD:
-        return jsonify(success=False, message="권한이 없습니다."), 403
+    try:
+        req = request.get_json(force=True) or {}
+        pw  = req.get("password", "").strip()
+        # 관리자만 삭제 가능
+        if pw != ADMIN_PASSWORD:
+            return jsonify(success=False, message="권한이 없습니다."), 403
 
-    resp = supabase.from_("jobs").delete().eq("id", job_id).execute()
-    # supabase-python 최신 버전에서는 resp.error 대신 resp.get("error") 를 쓸 수도 있습니다.
-    if getattr(resp, "error", None) or not getattr(resp, "data", None):
-        return jsonify(success=False, message="삭제에 실패했습니다."), 500
+        resp = supabase.from_("jobs").delete().eq("id", job_id).execute()
+        # resp.error 대신 resp.data 체크
+        if not resp.data:
+            return jsonify(success=False, message="삭제 실패"), 500
 
-    return jsonify(success=True)
+        return jsonify(success=True, message="삭제되었습니다.")
+    except Exception as e:
+        return jsonify(success=False, message=f"서버 오류: {e}"), 500
+
 
 
 
