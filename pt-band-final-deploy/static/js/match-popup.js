@@ -136,9 +136,38 @@ function renderEditForm(job, password, isAdmin) {
         <div class="flex justify-end space-x-2 pt-4">
           <button type="button" data-action="cancel" class="bg-gray-500 text-white px-4 py-2 rounded">취소</button>
           <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded">저장</button>
+          ${isAdmin
+            ? `<button type="button" id="delete-btn" class="bg-red-600 text-white px-4 py-2 rounded">삭제</button>`
+            : ''}
         </div>
       </form>
     </div>`;
+  // 삭제 버튼 이벤트 핸들러 //
+    document.getElementById('edit-form').addEventListener('submit', /* 저장 로직 */);
+
+     if (isAdmin) {
+       modal.querySelector('#delete-btn').addEventListener('click', async () => {
+         if (!confirm('정말 이 글을 삭제하시겠습니까?')) return;
+         try {
+           const res = await fetch(`/api/delete/${job.id}`, {
+             method: 'DELETE',
+             headers: { 'Content-Type': 'application/json' },
+             body: JSON.stringify({ password })
+           });
+           const data = await res.json();
+           if (!res.ok || !data.success) throw new Error(data.message || '삭제 실패');
+           alert('삭제되었습니다.');
+           modal.remove();
+           if (window.App) window.App.loadJobs();
+         } catch (err) {
+           alert(err.message);
+         }
+       });
+     }
+
+  
+
+  // 삭제 버튼 이벤트 핸들러 여기까지 //
   document.body.appendChild(modal);
 
   modal.addEventListener('click', e => { if (e.target === modal) closeModal(modal); });
