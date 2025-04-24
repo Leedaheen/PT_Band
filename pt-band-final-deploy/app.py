@@ -45,23 +45,39 @@ def add_job():
 @app.route("/click/<int:job_id>", methods=["POST"])
 def click(job_id):
     clicked = session.setdefault('clicked', [])
+    # 이미 클릭한 세션이면 곧바로 성공 리턴
     if str(job_id) in clicked:
         return jsonify(success=True)
-        
-     # raw SQL fragment 로 클릭 수 1 증가
-    resp = supabase.from_("jobs") \
-        .update({"clicks": supabase.postgrest.raw("clicks + 1")}) \
-        .eq("id", job_id) \
-        .execute()
 
-    print("RPC update result:", resp.data, resp.error)
+    try:
+        # 1) 현재 클릭 수 조회
+        sel = supabase.from_("jobs") \
+            .select("clicks") \
+            .eq("id", job_id) \
+            .single() \
+            .execute()
+        if sel.error or not sel.data:
+            raise Exception(sel.error or "조회수 조회 실패")
 
-    if resp.error:
-        return jsonify(success=False, message="조회수 업데이트 실패"), 500
+        current = sel.data.get("clicks", 0) or 0
 
-    clicked.append(str(job_id))
-    session['clicked'] = clicked
-    return jsonify(success=True)
+        # 2) 클릭 수 +1 업데이트
+        upd = supabase.from_("jobs") \
+            .update({"clicks": current + 1}) \
+            .eq("id", job_id) \
+            .execute()
+        if upd.error:
+            raise Exception(upd.error)
+
+        # 3) 세션에 기록하고 성공 리턴
+        clicked.append(str(job_id))
+        session['clicked'] = clicked
+        return jsonify(success=True)
+
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        return jsonify(success=False, message=f"서버 오류: {e}"), 500
+
 
 # 비밀번호 검증 엔드포인트 (API 및 기존 경로 모두 지원)
 @app.route("/api/verify-password/<int:job_id>", methods=["POST"])
