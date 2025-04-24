@@ -56,27 +56,29 @@ def click(job_id):
             .eq("id", job_id) \
             .single() \
             .execute()
-        if sel.error or not sel.data:
-            raise Exception(sel.error or "조회수 조회 실패")
 
-        current = sel.data.get("clicks", 0) or 0
+        current = (sel_resp.data or {}).get("clicks", 0) or 0
 
-        # 2) 클릭 수 +1 업데이트
-        upd = supabase.from_("jobs") \
+        # 2) clicks + 1 업데이트
+        supabase.from_("jobs") \
             .update({"clicks": current + 1}) \
             .eq("id", job_id) \
             .execute()
-        if upd.error:
-            raise Exception(upd.error)
 
-        # 3) 세션에 기록하고 성공 리턴
+        # 3) 세션에 기록 후 성공 리턴
         clicked.append(str(job_id))
         session['clicked'] = clicked
         return jsonify(success=True)
 
+    except APIError as e:
+        # PostgREST 요청 에러 (400, 500 등)
+        app.logger.error("클릭수 업데이트 실패 (Supabase): %s", e)
+        return jsonify(success=False, message="조회수 업데이트 실패"), 500
+
     except Exception as e:
-        import traceback; traceback.print_exc()
-        return jsonify(success=False, message=f"서버 오류: {e}"), 500
+        # 기타 파싱 에러 등
+        app.logger.exception("클릭수 처리 중 예외")
+        return jsonify(success=False, message="서버 오류"), 500
 
 
 # 비밀번호 검증 엔드포인트 (API 및 기존 경로 모두 지원)
