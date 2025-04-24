@@ -42,6 +42,25 @@ def add_job():
         return jsonify(success=False, message="등록 실패"), 500
     return jsonify(success=True)
 
+####### 게시물 삭제 항목
+
+@app.route("/api/delete/<int:job_id>", methods=["DELETE"])
+def delete_job(job_id):
+    req = request.get_json(force=True) or {}
+    pw  = req.get("password", "").strip()
+    # 관리자 비밀번호만 허용
+    if pw != ADMIN_PASSWORD:
+        return jsonify(success=False, message="권한이 없습니다."), 403
+
+    resp = supabase.from_("jobs").delete().eq("id", job_id).execute()
+    # supabase-python 최신 버전에서는 resp.error 대신 resp.get("error") 를 쓸 수도 있습니다.
+    if getattr(resp, "error", None) or not getattr(resp, "data", None):
+        return jsonify(success=False, message="삭제에 실패했습니다."), 500
+
+    return jsonify(success=True)
+
+
+
 ####### 클릭 카운팅
 
 @app.route("/click/<int:job_id>", methods=["POST"])
