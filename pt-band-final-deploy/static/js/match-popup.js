@@ -1,16 +1,13 @@
 // match-popup.js
-// 글 수정 + 매칭 상태 변경 팝업 (관리자 PIN 고정 및 삭제 기능 포함)
+// 글 수정 + 매칭 상태 변경 팝업 (관리자 PIN 고정 포함)
 // -------------------------------------------------
 
 // 안전 파싱 유틸
 function safeParseArray(data) {
   if (!data) return [];
   if (Array.isArray(data)) return data;
-  try {
-    return JSON.parse(data);
-  } catch {
-    return [];
-  }
+  try { return JSON.parse(data); }
+  catch { return []; }
 }
 
 // 스크롤 잠금 제어
@@ -30,7 +27,7 @@ export default function openMatchPopup(jobId) {
   showPasswordModal(jobId);
 }
 
-// 비밀번호 확인 모달 표시
+// 1) 비밀번호 확인 모달 표시
 function showPasswordModal(jobId) {
   const pwModal = document.createElement('div');
   pwModal.id = 'password-modal';
@@ -46,22 +43,19 @@ function showPasswordModal(jobId) {
     </div>`;
   document.body.appendChild(pwModal);
 
-  // 배경 클릭 또는 취소 버튼
+  // 배경 클릭 또는 취소 버튼 → 닫기
   pwModal.addEventListener('click', e => {
     if (e.target === pwModal || e.target.id === 'pw-cancel') {
       closeModal(pwModal);
     }
   });
-  // 내부 박스 클릭 방지
-  pwModal.querySelector('#pw-box').addEventListener('click', e => e.stopPropagation());
-  // 취소 버튼 핸들
-  pwModal.querySelector('#pw-cancel').addEventListener('click', () => closeModal(pwModal));
-
-  // 확인 버튼 핸들
+  // 모달 박스 내부 클릭은 닫기 이벤트 막기
+  pwModal.querySelector('#pw-box')
+    .addEventListener('click', e => e.stopPropagation());
+  // 확인 버튼
   pwModal.querySelector('#pw-submit').addEventListener('click', async () => {
     const rawPwd = (pwModal.querySelector('#pw-input').value || '').trim();
     if (rawPwd.length < 4) return alert('비밀번호는 4자리 이상이어야 합니다.');
-    console.debug('[MatchPopup] verifying password for job', jobId, rawPwd);
     try {
       let res = await fetch(`/api/verify-password/${jobId}`, {
         method: 'POST',
@@ -69,7 +63,7 @@ function showPasswordModal(jobId) {
         body: JSON.stringify({ password: rawPwd })
       });
       if (res.status === 404) {
-        console.debug('[MatchPopup] fallback to /verify-password');
+        // fallback
         res = await fetch(`/verify-password/${jobId}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -77,18 +71,16 @@ function showPasswordModal(jobId) {
         });
       }
       const data = await res.json();
-      console.debug('[MatchPopup] verify response', res.status, data);
       if (!res.ok || !data.success) throw new Error(data.message || '비밀번호 검증에 실패했습니다.');
       closeModal(pwModal);
       renderEditForm(data.job, rawPwd, data.is_admin);
     } catch (err) {
-      console.error('[MatchPopup] verify-password error', err);
       alert(err.message);
     }
   });
 }
 
-// 수정/매칭 상태 변경 폼 렌더링
+// 2) 수정/매칭 상태 변경 폼 렌더링
 function renderEditForm(job, password, isAdmin) {
   const modal = document.createElement('div');
   modal.id = 'match-modal';
@@ -112,7 +104,6 @@ function renderEditForm(job, password, isAdmin) {
         <input name="fee"      value="${job.fee || ''}"      placeholder="월 회비" class="border p-2 w-full" />
         <input name="contact"  value="${job.contact || ''}"  placeholder="연락처" class="border p-2 w-full" />
         <textarea name="intro" maxlength="100" placeholder="소개글 (100자 이내)" class="border p-2 w-full">${job.intro || ''}</textarea>
-
         <div>
           <p class="font-semibold mb-1">매칭 완료할 파트 선택</p>
           ${parts.map(p => `
@@ -120,76 +111,49 @@ function renderEditForm(job, password, isAdmin) {
               <input type="checkbox" name="matched_part" value="${p}" ${matchedNow.includes(p)?'checked':''}/> ${p}
             </label>`).join('')}
         </div>
-
         ${isAdmin ? `
           <div class="mt-2">
             <label class="inline-flex items-center">
               <input type="checkbox" name="pinned" value="true" class="mr-2" ${job.pinned?'checked':''}/>📌 상단 고정
             </label>
-          </div>
-        ` : ''}
-
-        <div class="flex justify-between space-x-2 pt-4">
+          </div>` : ''}
+        <div class="flex justify-end space-x-2 pt-4">
           <button type="button" data-action="cancel" class="bg-gray-500 text-white px-4 py-2 rounded">취소</button>
-          ${isAdmin ? `<button type="button" data-action="delete" class="bg-red-600 text-white px-4 py-2 rounded">삭제</button>` : ''}
           <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded">저장</button>
         </div>
       </form>
     </div>`;
   document.body.appendChild(modal);
 
-  // 모달 바깥 클릭 닫기
-  modal.addEventListener('click', e => { if (e.target === modal) closeModal(modal); });
-  modal.querySelector('#match-box').addEventListener('click', e => e.stopPropagation());
+  // ① 배경 클릭 닫기
+  modal.addEventListener('click', e => {
+    if (e.target === modal) closeModal(modal);
+  });
+  // ② 내부 박스 클릭은 닫기 이벤트 전파 막기
+  modal.querySelector('#match-box')
+    .addEventListener('click', e => e.stopPropagation());
+  // ③ 취소 버튼
+  modal.querySelector('button[data-action="cancel"]')
+    .addEventListener('click', () => closeModal(modal));
 
-  // 취소 버튼
-  modal.querySelector('button[data-action="cancel"]').addEventListener('click', () => closeModal(modal));
-
-  // 삭제 버튼 (관리자 전용)
-  const delBtn = modal.querySelector('button[data-action="delete"]');
-  if (delBtn) {
-    delBtn.addEventListener('click', async () => {
-      if (!confirm('정말 삭제하시겠습니까?')) return;
-      try {
-        const res = await fetch(`/api/delete/${job.id}`, { method: 'DELETE' });
-        const data = await res.json();
-        if (!res.ok || !data.success) throw new Error(data.message || '삭제 실패');
-        alert('삭제되었습니다.');
-        closeModal(modal);
-        if (window.App) window.App.loadJobs();
-      } catch (err) {
-        console.error('[MatchPopup] delete error', err);
-        alert(err.message);
-      }
-    });
-  }
-
-  // 저장 처리
+  // ④ 저장 처리
   modal.querySelector('#edit-form').addEventListener('submit', async e => {
     e.preventDefault();
-    const checkedEls = modal.querySelectorAll('input[name="matched_part"]:checked');
-    const matched = Array.from(checkedEls).map(el => el.value);
-    let pinned = false;
-    if (isAdmin) {
-      const pinEl = modal.querySelector('input[name="pinned"]');
-      pinned = !!(pinEl && pinEl.checked);
-    }
-
+    const fd = new FormData(e.target);
+    const matched = fd.getAll('matched_part');
     const payload = {
       password,
-      team:     modal.querySelector('input[name="team"]').value,
-      nickname: modal.querySelector('input[name="nickname"]').value,
-      age:      modal.querySelector('input[name="age"]').value,
-      region:   modal.querySelector('select[name="region"]').value,
-      location: modal.querySelector('input[name="location"]').value,
-      fee:      modal.querySelector('input[name="fee"]').value,
-      contact:  modal.querySelector('input[name="contact"]').value,
-      intro:    modal.querySelector('textarea[name="intro"]').value,
-      matched_parts: matched,
-      ...(isAdmin ? { pinned } : {})
+      team:           fd.get('team'),
+      nickname:       fd.get('nickname'),
+      age:            fd.get('age'),
+      region:         fd.get('region'),
+      location:       fd.get('location'),
+      fee:            fd.get('fee'),
+      contact:        fd.get('contact'),
+      intro:          fd.get('intro'),
+      matched_parts:  matched,
+      ...(isAdmin ? { pinned: fd.get('pinned')==='on' } : {})
     };
-    console.log('[MatchPopup] update payload:', payload);
-
     try {
       const res = await fetch(`/api/update/${job.id}`, {
         method: 'PATCH',
@@ -197,13 +161,11 @@ function renderEditForm(job, password, isAdmin) {
         body: JSON.stringify(payload)
       });
       const data = await res.json();
-      console.log('[MatchPopup] update response:', res.status, data);
       if (!res.ok || !data.success) throw new Error(data.message || '저장 실패');
       alert('저장되었습니다.');
       closeModal(modal);
       if (window.App) window.App.loadJobs();
     } catch (err) {
-      console.error('[MatchPopup] update error', err);
       alert(err.message);
     }
   });
