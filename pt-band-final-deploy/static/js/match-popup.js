@@ -46,14 +46,21 @@ function showPasswordModal(jobId) {
     </div>`;
   document.body.appendChild(pwModal);
 
-  pwModal.addEventListener('click', e => {
-    if (e.target === pwModal || e.target.id === 'pw-cancel') closeModal(pwModal);
-  });
- // 내부 컨테이너 클릭은 모달 닫기 방지
-  pwModal.querySelector('#pw-box').addEventListener('click', e => e.stopPropagation());
+pwModal.addEventListener('click', e => {
+  // 1) 배경을 클릭하거나, 2) pw-cancel 버튼 자체를 클릭했을 때 닫기
+  if (e.target === pwModal || e.target.id === 'pw-cancel') {
+    closeModal(pwModal);
+  }
+});
 
-  // 취소 버튼에도 명시적으로 닫기 핸들러 추가
-  pwModal.querySelector('#pw-cancel').addEventListener('click', () => closeModal(pwModal));
+// 내부 박스 클릭은 모달 닫기 이벤트 전파를 막기
+pwModal.querySelector('#pw-box')
+  .addEventListener('click', e => e.stopPropagation());
+
+// 그리고 취소 버튼에도 명시적으로 닫기 핸들러 달아주기
+pwModal.querySelector('#pw-cancel')
+  .addEventListener('click', () => closeModal(pwModal));
+
 
   pwModal.querySelector('#pw-submit').addEventListener('click', async () => {
     const rawPwd = (pwModal.querySelector('#pw-input').value || '').trim();
