@@ -134,20 +134,26 @@ function renderEditForm(job, password, isAdmin) {
 
   // 삭제 (관리자 전용)
   if (isAdmin) {
-    modal.querySelector('button[data-action="delete"]')
-      .addEventListener('click', async () => {
-        if (!confirm('정말 삭제하시겠습니까?')) return;
-        try {
-          const res = await fetch(`/api/delete/${job.id}`, { method: 'DELETE' });
-          const data = await res.json();
-          if (!res.ok || !data.success) throw new Error(data.message || '삭제 실패');
-          alert('삭제되었습니다.');
-          closeModal(modal);
-          if (window.App) window.App.loadJobs();
-        } catch (err) {
-          alert(err.message);
-        }
+    // 삭제 버튼 핸들러 안에 다음처럼 body 옵션이 반드시 있어야 합니다.
+    modal.querySelector('#delete-btn').addEventListener('click', async () => {
+      if (!confirm('정말 삭제하시겠습니까?')) return;
+    
+      // password 는 renderEditForm 에 전달된 비밀번호 변수입니다.
+      console.log('[MatchPopup] delete payload:', { password });
+    
+      const res = await fetch(`/api/delete/${job.id}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type':'application/json' },
+        body: JSON.stringify({ password })
       });
+    
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.message || '삭제 실패');
+      alert('삭제되었습니다.');
+      closeModal(modal);
+      window.App.loadJobs();
+    });
+
   }
 
   // 저장
