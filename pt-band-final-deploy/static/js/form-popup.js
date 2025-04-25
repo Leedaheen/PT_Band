@@ -86,12 +86,13 @@ export default function openForm() {
         <option value="경기도 > 안성시">경기도 > 안성시</option>
         <option value="서울특별시 > 강남구">서울특별시 > 강남구</option>
         <option value="부산광역시 > 해운대구">부산광역시 > 해운대구</option>
+        <option value="기타"> 기타 </option>
       </select>`;
 
     if (type === '구인') {
       container.innerHTML = `
-        <input required name='team' placeholder='밴드명 필수' class='border p-1 w-full mb-2'/>
-        <input required name='nickname' placeholder='오픈톡 닉네임 필수' class='border p-1 w-full mb-2'/>
+        <input required name='team' placeholder='밴드명 (필수)' class='border p-1 w-full mb-2'/>
+        <input required name='nickname' placeholder='닉네임 (필수)' class='border p-1 w-full mb-2'/>
         <input name='age' placeholder='멤버 연령대' class='border p-1 w-full mb-2'/>
         <div class='mb-2'>
           <label class='block mb-1'>구인 파트:</label>
@@ -99,8 +100,8 @@ export default function openForm() {
         </div>
         <input required name='location' placeholder='연습실 위치 (필수)' class='border p-1 w-full mb-2'/>
         ${regionSelectHTML}
-        <input name='fee' placeholder='월 회비 선택' class='border p-1 w-full mb-2'/>
-        <input required name='contact' placeholder='연락처 필수' class='border p-1 w-full mb-2'/>
+        <input name='fee' placeholder='월 회비' class='border p-1 w-full mb-2'/>
+        <input required name='contact' placeholder='연락처 (필수)' class='border p-1 w-full mb-2'/>
         <textarea name='intro' placeholder='선호 장르 및 간단한 소개 (100자 이내)' maxlength='100' class='border p-1 w-full mb-2'></textarea>
         
         <div class="text-xs text-gray-500 mb-2 text-right">
